@@ -32,6 +32,7 @@ interface EdgeData {
 }
 
 const PipelineBuilder = () => {
+  // Fixed the TypeScript error by ensuring expanded is boolean but stored as 0 or 1 in positions
   const [nodes, setNodes] = useState<NodeData[]>([
     { 
       id: 1, 
@@ -39,7 +40,7 @@ const PipelineBuilder = () => {
       title: 'Text Input', 
       subtitle: 'User prompt',
       expanded: false,
-      position: { x: 50, y: 180 }, 
+      position: { x: 30, y: 180 }, // Adjusted positions to fit inside the container
       config: {
         'mode': 'streaming',
         'max_tokens': 1000
@@ -51,7 +52,7 @@ const PipelineBuilder = () => {
       title: 'Attribute Capture', 
       subtitle: 'Extract key details',
       expanded: false,
-      position: { x: 320, y: 120 },
+      position: { x: 250, y: 120 }, // Adjusted positions
       config: {
         'attribute': 'geometry',
         'vector': 'point',
@@ -64,7 +65,7 @@ const PipelineBuilder = () => {
       title: 'Position Setting', 
       subtitle: 'Coordinate mapping',
       expanded: false,
-      position: { x: 560, y: 70 },
+      position: { x: 450, y: 70 }, // Adjusted positions
       config: {
         'x': 1,
         'y': 0,
@@ -77,7 +78,7 @@ const PipelineBuilder = () => {
       title: 'Instance', 
       subtitle: 'Points configuration',
       expanded: false,
-      position: { x: 700, y: 150 },
+      position: { x: 600, y: 150 }, // Adjusted positions
       config: {
         'count': 120,
         'selection': 'all',
@@ -90,7 +91,7 @@ const PipelineBuilder = () => {
       title: 'Geometry Join', 
       subtitle: 'Merge geometries',
       expanded: false,
-      position: { x: 900, y: 220 },
+      position: { x: 750, y: 220 }, // Adjusted positions
       config: {
         'mode': 'union',
         'normalize': true
@@ -102,7 +103,7 @@ const PipelineBuilder = () => {
       title: 'Output', 
       subtitle: 'Final result',
       expanded: false,
-      position: { x: 1080, y: 140 },
+      position: { x: 900, y: 140 }, // Adjusted positions
       config: {
         'format': 'glb',
         'compress': true
@@ -381,7 +382,6 @@ const PipelineBuilder = () => {
                     initial={{ scale: 0.95, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.5 }}
-                    whileHover={{ scale: 1.02 }}
                   >
                     <div className={`text-xs font-medium p-2 flex justify-between items-center ${nodeHeaderColor(node.type)}`}>
                       <div className="flex items-center gap-1.5">

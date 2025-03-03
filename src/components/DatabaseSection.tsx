@@ -652,11 +652,10 @@ export async function processPipelineNode(node, input) {
           transition={{ duration: 0.7, delay: 0.4 }}
           className="mt-16 text-center"
         >
+          {/* Fixed the Button by removing whileHover and whileTap framer-motion props */}
           <Button 
             size="lg" 
             className="rounded-full shadow-glow"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
           >
             Explore Database Options <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
