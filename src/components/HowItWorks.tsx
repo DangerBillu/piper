@@ -27,7 +27,7 @@ const steps: Step[] = [
   },
   {
     title: 'Deploy & Scale',
-    description: 'Once you're satisfied, deploy your pipeline to production with a single click. Scale automatically based on your workload needs.',
+    description: "Once you're satisfied, deploy your pipeline to production with a single click. Scale automatically based on your workload needs.",
     icon: '🚀'
   }
 ];
