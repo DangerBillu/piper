@@ -10,7 +10,7 @@ const Footer = () => {
           <div className="md:col-span-1">
             <div className="flex items-center space-x-2 mb-4">
               <div className="h-8 w-8 rounded-full bg-primary"></div>
-              <span className="text-xl font-semibold">ChainAI</span>
+              <span className="text-xl font-semibold">Piper</span>
             </div>
             <p className="text-sm text-muted-foreground mb-6">
               Build powerful AI pipelines with a visual, intuitive interface. Connect models, process data, and deploy with ease.
@@ -33,7 +33,7 @@ const Footer = () => {
             <ul className="space-y-2">
               <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</a></li>
               <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Documentation</a></li>
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Pricing</a></li>
+              <li><a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Pricing</a></li>
               <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Changelog</a></li>
             </ul>
           </div>
@@ -60,12 +60,12 @@ const Footer = () => {
 
         <div className="border-t mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
           <p className="text-sm text-muted-foreground mb-4 md:mb-0">
-            © {new Date().getFullYear()} ChainAI. All rights reserved.
+            © {new Date().getFullYear()} Piper. All rights reserved.
           </p>
           <div className="flex items-center">
             <Button variant="ghost" size="sm" className="text-sm text-muted-foreground">
               <Mail className="h-4 w-4 mr-2" />
-              contact@chainai.com
+              contact@piper.ai
             </Button>
           </div>
         </div>

@@ -45,8 +45,8 @@ const HeroSection = () => {
       <div className="container px-6 md:px-12 mx-auto">
         <div className="max-w-4xl mx-auto text-center relative z-10">
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 animate-slide-up text-balance">
-            Chain AI Models Into 
-            <span className="text-primary block md:inline"> Powerful Pipelines</span>
+            Build AI Pipelines with 
+            <span className="text-primary block md:inline"> Piper</span>
           </h1>
           
           <p className="text-lg md:text-xl text-muted-foreground mb-8 animate-slide-up animation-delay-200 max-w-2xl mx-auto">
@@ -55,7 +55,7 @@ const HeroSection = () => {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-slide-up animation-delay-300">
-            <Button size="lg" className="rounded-full px-8">
+            <Button size="lg" className="rounded-full px-8 shadow-glow">
               Get Started <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
             <Button variant="outline" size="lg" className="rounded-full px-8">

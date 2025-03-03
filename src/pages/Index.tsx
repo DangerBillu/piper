@@ -4,6 +4,8 @@ import HeroSection from '@/components/HeroSection';
 import PipelineBuilder from '@/components/PipelineBuilder';
 import ModelExplorer from '@/components/ModelExplorer';
 import HowItWorks from '@/components/HowItWorks';
+import DatabaseSection from '@/components/DatabaseSection';
+import PricingSection from '@/components/PricingSection';
 import Footer from '@/components/Footer';
 
 const Index = () => {
@@ -15,6 +17,8 @@ const Index = () => {
         <PipelineBuilder />
         <ModelExplorer />
         <HowItWorks />
+        <DatabaseSection />
+        <PricingSection />
       </main>
       <Footer />
     </div>
