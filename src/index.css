@@ -80,6 +80,26 @@
   html {
     scroll-behavior: smooth;
   }
+
+  /* Custom Scrollbar for Modern Look */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-secondary/30;
+    border-radius: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-primary/50;
+    border-radius: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary/70;
+  }
 }
 
 @layer utilities {
@@ -92,7 +112,7 @@
   }
 
   .neo-card {
-    @apply rounded-xl bg-secondary/50 shadow-neo dark:bg-secondary/20;
+    @apply rounded-xl bg-secondary/50 shadow-neo dark:bg-secondary/20 dark:backdrop-blur-sm;
   }
 
   .section-padding {
@@ -106,6 +126,51 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  /* Animation delay classes */
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+
+  .animation-delay-300 {
+    animation-delay: 300ms;
+  }
+
+  .animation-delay-400 {
+    animation-delay: 400ms;
+  }
+
+  .animation-delay-500 {
+    animation-delay: 500ms;
+  }
+
+  .animation-delay-600 {
+    animation-delay: 600ms;
+  }
+
+  /* Enhanced cards and UI effects */
+  .glow-effect {
+    @apply relative;
+  }
+
+  .glow-effect::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-primary/30 to-secondary/30 opacity-0 rounded-xl blur-xl transition-opacity duration-500;
+    z-index: -1;
+  }
+
+  .glow-effect:hover::before {
+    @apply opacity-100;
+  }
+  
+  /* Dark mode enhancements */
+  .dark .neo-frost {
+    @apply bg-black/40 backdrop-blur-xl border border-white/5 shadow-lg;
+  }
+  
+  .dark .frost-panel {
+    @apply bg-white/5 backdrop-blur-lg border border-white/10;
+  }
 }
 
 .bg-grid {
@@ -114,4 +179,33 @@
 
 .dark .bg-grid {
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill='none' stroke='rgb(255 255 255 / 0.05)'%3e%3cpath d='M0 .5H31.5V32'/%3e%3c/svg%3e");
+}
+
+/* Enhanced Animations */
+@keyframes fadeUpIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+  }
+}
+
+.animate-fade-up-in {
+  animation: fadeUpIn 0.6s ease-out forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s infinite;
 }

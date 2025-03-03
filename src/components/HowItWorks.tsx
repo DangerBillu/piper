@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { CheckCircle, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { motion } from 'framer-motion';
 
 interface Step {
   title: string;
@@ -93,24 +94,60 @@ const HowItWorks = () => {
     };
   }, []);
 
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: (i: number) => ({
+      opacity: 1,
+      y: 0,
+      transition: {
+        delay: i * 0.1,
+        duration: 0.5,
+        ease: "easeOut"
+      }
+    })
+  };
+
+  const detailVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: (i: number) => ({
+      opacity: 1,
+      x: 0,
+      transition: {
+        delay: 0.2 + i * 0.1,
+        duration: 0.4
+      }
+    })
+  };
+
   return (
     <section id="how-it-works" className="py-24 relative overflow-hidden" ref={sectionRef}>
       <div className="absolute inset-0 bg-grid opacity-[0.02] dark:opacity-[0.05] animate-pulse"></div>
       
       <div className="container px-6 mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-5xl font-bold mb-4 animate-slide-up">How Piper Works</h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto animate-slide-up animation-delay-200">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.1 }}
+          transition={{ duration: 0.7 }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-3xl md:text-5xl font-bold mb-4">How Piper Works</h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
             Building AI pipelines has never been easier. Follow these simple steps to create your own custom AI workflow.
           </p>
-        </div>
+        </motion.div>
 
         <div className="grid md:grid-cols-12 gap-10">
           <div className="md:col-span-4 space-y-4 order-2 md:order-1">
             {steps.map((step, index) => (
-              <div
+              <motion.div
                 key={index}
                 ref={el => itemRefs.current[index] = el}
+                custom={index}
+                variants={cardVariants}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, amount: 0.1 }}
                 className={`neo-card p-6 cursor-pointer transition-all duration-300 hover:scale-105 ${
                   activeIndex === index 
                     ? 'border-primary/50 shadow-glow' 
@@ -119,22 +156,26 @@ const HowItWorks = () => {
                 onClick={() => setActiveIndex(index)}
               >
                 <div className="flex items-start gap-4">
-                  <div className={`text-3xl ${activeIndex === index ? 'scale-110' : ''} transition-transform`}>
+                  <motion.div 
+                    animate={activeIndex === index ? { scale: 1.1, rotate: [0, 5, 0, -5, 0] } : { scale: 1 }}
+                    transition={{ duration: 0.5 }}
+                    className="text-3xl"
+                  >
                     {step.icon}
-                  </div>
+                  </motion.div>
                   <div>
                     <h3 className="font-medium text-lg mb-1">{step.title}</h3>
                     <p className="text-sm text-muted-foreground">{step.description}</p>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
 
           <div className="md:col-span-8 order-1 md:order-2">
             <div className="h-[500px] neo-card flex items-center justify-center p-10 relative overflow-hidden">
               {steps.map((step, index) => (
-                <div 
+                <motion.div 
                   key={index}
                   className={`absolute inset-0 w-full h-full flex items-center justify-center p-8 transition-all duration-500 
                     ${activeIndex === index 
@@ -145,27 +186,41 @@ const HowItWorks = () => {
                     }`}
                 >
                   <div className="text-center">
-                    <div className="text-6xl mb-6 mx-auto animate-float">{step.icon}</div>
+                    <motion.div 
+                      animate={{ y: [0, -10, 0], rotate: [0, 5, 0, -5, 0] }}
+                      transition={{ duration: 6, repeat: Infinity, repeatType: "reverse" }}
+                      className="text-6xl mb-6 mx-auto"
+                    >
+                      {step.icon}
+                    </motion.div>
                     <h3 className="text-2xl font-bold mb-6">{step.title}</h3>
                     <div className="flex flex-col gap-4 max-w-lg mx-auto text-left">
                       {step.details.map((detail, i) => (
-                        <div 
+                        <motion.div 
                           key={i} 
-                          className="flex items-start gap-2 animate-fade-in" 
-                          style={{ animationDelay: `${i * 150}ms` }}
+                          custom={i}
+                          variants={detailVariants}
+                          initial="hidden"
+                          animate={activeIndex === index ? "visible" : "hidden"}
+                          className="flex items-start gap-2"
                         >
                           <CheckCircle className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                           <p>{detail}</p>
-                        </div>
+                        </motion.div>
                       ))}
                     </div>
-                    <div className="mt-8 opacity-80 animate-slide-up animation-delay-300">
+                    <motion.div 
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.6, duration: 0.4 }}
+                      className="mt-8 opacity-80"
+                    >
                       <Button size="sm" variant="outline" className="rounded-full">
                         Learn More <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
-                    </div>
+                    </motion.div>
                   </div>
-                </div>
+                </motion.div>
               ))}
 
               <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-2">

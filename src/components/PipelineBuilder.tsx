@@ -1,9 +1,10 @@
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Play, Circle, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Play, Circle, CheckCircle2, Zap } from 'lucide-react';
 import CodeViewer from '@/components/CodeViewer';
+import { motion } from 'framer-motion';
 
 const PipelineBuilder = () => {
   const [nodes, setNodes] = useState([
@@ -25,12 +26,22 @@ const PipelineBuilder = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [activeNodeId, setActiveNodeId] = useState<number | null>(null);
   const [completedNodes, setCompletedNodes] = useState<number[]>([]);
+  const [progress, setProgress] = useState(0);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    };
+  }, []);
 
   const runPipeline = () => {
     setIsRunning(true);
     setActiveNodeId(1);
     setCompletedNodes([]);
+    setProgress(0);
     
     const executeNode = (nodeId: number, delay: number) => {
       return new Promise<void>((resolve) => {
@@ -39,10 +50,24 @@ const PipelineBuilder = () => {
         timeoutRef.current = setTimeout(() => {
           setActiveNodeId(nodeId);
           
-          timeoutRef.current = setTimeout(() => {
-            setCompletedNodes((prev) => [...prev, nodeId]);
-            resolve();
-          }, 1000);
+          // Animate progress from 0 to 100%
+          let startTime = Date.now();
+          const duration = 1000; // 1 second
+          
+          const updateProgress = () => {
+            const elapsed = Date.now() - startTime;
+            const newProgress = Math.min(100, (elapsed / duration) * 100);
+            setProgress(newProgress);
+            
+            if (newProgress < 100) {
+              animationFrameRef.current = requestAnimationFrame(updateProgress);
+            } else {
+              setCompletedNodes((prev) => [...prev, nodeId]);
+              resolve();
+            }
+          };
+          
+          animationFrameRef.current = requestAnimationFrame(updateProgress);
         }, delay);
       });
     };
@@ -59,46 +84,100 @@ const PipelineBuilder = () => {
       await executeNode(5, 1000);
       
       setActiveNodeId(null);
-      setTimeout(() => setIsRunning(false), 1000);
+      setTimeout(() => {
+        setIsRunning(false);
+        setProgress(0);
+      }, 1000);
     };
     
     simulateExecution();
+  };
+
+  const nodeVariants = {
+    initial: { scale: 0.95, opacity: 0 },
+    animate: { scale: 1, opacity: 1, transition: { duration: 0.5 } },
+    hover: { scale: 1.05, transition: { duration: 0.2 } },
+    tap: { scale: 0.98, transition: { duration: 0.1 } },
+    active: { 
+      scale: 1.1, 
+      boxShadow: "0 0 15px rgba(66, 153, 225, 0.7)",
+      transition: { duration: 0.3 }
+    },
+    completed: {
+      borderColor: "rgb(34, 197, 94)",
+      transition: { duration: 0.3 }
+    }
   };
 
   return (
     <section id="pipeline" className="py-24 relative overflow-hidden">
       <div className="absolute inset-0 bg-grid opacity-[0.02] dark:opacity-[0.05]"></div>
       <div className="container px-6 mx-auto">
-        <div className="text-center mb-16 animate-slide-up">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7 }}
+          className="text-center mb-16"
+        >
           <h2 className="text-3xl md:text-5xl font-bold mb-4">Visualize Your Pipeline</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Drag and drop models to build your custom AI workflow. Connect components to create powerful processing pipelines.
           </p>
-        </div>
+        </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-          <div className="h-[460px] neo-card p-6 relative shadow-glow animate-slide-up">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7, delay: 0.2 }}
+            className="h-[460px] neo-card p-6 relative shadow-glow"
+          >
             <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
               {/* Pipeline nodes */}
               {nodes.map((node) => (
-                <div 
+                <motion.div 
                   key={node.id}
-                  className={`absolute rounded-lg shadow-md p-4 min-w-[120px] text-center cursor-move select-none transition-all duration-300
+                  className={`absolute rounded-lg shadow-md p-4 min-w-[120px] text-center cursor-move select-none
                     ${node.type === 'input' ? 'glass dark:glass-light border-primary/50' : 
                       node.type === 'process' ? 'glass dark:glass-light border-accent/50' : 
                       'glass dark:glass-light border-secondary/50'}
-                    ${activeNodeId === node.id ? 'scale-110 shadow-glow border-primary' : ''}
                     ${completedNodes.includes(node.id) ? 'border-green-500/70' : ''}
                   `}
                   style={{ left: node.x, top: node.y }}
+                  variants={nodeVariants}
+                  initial="initial"
+                  animate={
+                    activeNodeId === node.id 
+                      ? "active" 
+                      : completedNodes.includes(node.id) 
+                        ? "completed" 
+                        : "animate"
+                  }
+                  whileHover="hover"
+                  whileTap="tap"
                 >
                   {node.title}
-                  {completedNodes.includes(node.id) && (
-                    <div className="absolute -top-2 -right-2 bg-green-500 rounded-full p-0.5">
-                      <CheckCircle2 className="h-4 w-4 text-white" />
+                  {activeNodeId === node.id && (
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 h-1 mt-2 rounded-full overflow-hidden">
+                      <div 
+                        className="bg-primary h-full rounded-full transition-all duration-300"
+                        style={{ width: `${progress}%` }}
+                      ></div>
                     </div>
                   )}
-                </div>
+                  {completedNodes.includes(node.id) && (
+                    <motion.div 
+                      initial={{ scale: 0, opacity: 0 }} 
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ duration: 0.3 }}
+                      className="absolute -top-2 -right-2 bg-green-500 rounded-full p-0.5"
+                    >
+                      <CheckCircle2 className="h-4 w-4 text-white" />
+                    </motion.div>
+                  )}
+                </motion.div>
               ))}
 
               {/* Edges between nodes */}
@@ -127,7 +206,7 @@ const PipelineBuilder = () => {
                   
                   return (
                     <g key={index}>
-                      <path 
+                      <motion.path 
                         d={`M${sourceX},${sourceY} C${sourceX + 50},${sourceY} ${targetX - 50},${targetY} ${targetX},${targetY}`}
                         fill="none"
                         stroke="currentColor"
@@ -136,6 +215,9 @@ const PipelineBuilder = () => {
                         className={isCompleted ? "stroke-green-500" : isActive ? "stroke-primary animate-pulse" : "stroke-primary"}
                         strokeDasharray={isActive ? "5,5" : ""}
                         strokeLinecap="round"
+                        initial={{ pathLength: 0 }}
+                        animate={{ pathLength: 1 }}
+                        transition={{ duration: 1.5, delay: 0.2 }}
                       />
                       <circle 
                         cx={targetX} 
@@ -145,27 +227,19 @@ const PipelineBuilder = () => {
                       />
                       
                       {isActive && (
-                        <circle 
-                          cx={sourceX + (targetX - sourceX) * 0.5} 
-                          cy={sourceY + (targetY - sourceY) * 0.5} 
+                        <motion.circle 
+                          animate={{
+                            cx: [sourceX, targetX],
+                            cy: [sourceY, targetY]
+                          }}
+                          transition={{
+                            duration: 1,
+                            repeat: Infinity,
+                            ease: "linear"
+                          }}
                           r="4" 
-                          className="fill-primary animate-pulse"
-                        >
-                          <animate 
-                            attributeName="cx" 
-                            from={sourceX} 
-                            to={targetX} 
-                            dur="1s" 
-                            repeatCount="indefinite"
-                          />
-                          <animate 
-                            attributeName="cy" 
-                            from={sourceY} 
-                            to={targetY} 
-                            dur="1s" 
-                            repeatCount="indefinite"
-                          />
-                        </circle>
+                          className="fill-primary"
+                        />
                       )}
                     </g>
                   );
@@ -173,7 +247,11 @@ const PipelineBuilder = () => {
               </svg>
             </div>
 
-            <div className="absolute bottom-4 right-4">
+            <motion.div 
+              className="absolute bottom-4 right-4"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
               <Button 
                 size="sm" 
                 onClick={runPipeline} 
@@ -181,21 +259,41 @@ const PipelineBuilder = () => {
                 className="rounded-full shadow-glow"
               >
                 {isRunning ? 'Running...' : 'Run Pipeline'} 
-                {isRunning ? <Circle className="ml-2 h-4 w-4 animate-spin" /> : <Play className="ml-2 h-4 w-4" />}
+                {isRunning ? (
+                  <Circle className="ml-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <motion.div
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ repeat: Infinity, duration: 1.5 }}
+                  >
+                    <Zap className="ml-2 h-4 w-4" />
+                  </motion.div>
+                )}
               </Button>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
-          <div className="animate-slide-up animation-delay-200">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7, delay: 0.4 }}
+          >
             <CodeViewer />
-          </div>
+          </motion.div>
         </div>
 
-        <div className="mt-10 text-center animate-slide-up animation-delay-300">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7, delay: 0.5 }}
+          className="mt-10 text-center"
+        >
           <Button size="lg" className="rounded-full px-8">
             Build Your Pipeline <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
-        </div>
+        </motion.div>
       </div>
     </section>
   );
