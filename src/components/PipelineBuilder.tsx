@@ -2,25 +2,121 @@
 import { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Play, Circle, CheckCircle2, Zap } from 'lucide-react';
+import { 
+  ArrowRight, Play, Circle, CheckCircle2, Zap, 
+  Box, ChevronDown, AlignJustify, Settings, 
+  ChevronUp, Terminal, Bot, Image as ImageIcon, FileText
+} from 'lucide-react';
 import CodeViewer from '@/components/CodeViewer';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Badge } from '@/components/ui/badge';
+
+interface NodeData {
+  id: number;
+  type: 'input' | 'process' | 'output';
+  title: string;
+  subtitle?: string;
+  expanded?: boolean;
+  position: { x: number; y: number };
+  config?: {
+    [key: string]: string | number;
+  }
+}
+
+interface EdgeData {
+  id: string;
+  source: number;
+  target: number;
+  animated?: boolean;
+  color?: string;
+}
 
 const PipelineBuilder = () => {
-  const [nodes, setNodes] = useState([
-    { id: 1, type: 'input', title: 'Text Input', x: 100, y: 150 },
-    { id: 2, type: 'process', title: 'GPT-4', x: 350, y: 100 },
-    { id: 3, type: 'process', title: 'Whisper', x: 350, y: 200 },
-    { id: 4, type: 'process', title: 'DALL-E 3', x: 600, y: 150 },
-    { id: 5, type: 'output', title: 'Image Output', x: 850, y: 150 },
+  const [nodes, setNodes] = useState<NodeData[]>([
+    { 
+      id: 1, 
+      type: 'input', 
+      title: 'Text Input', 
+      subtitle: 'User prompt',
+      expanded: false,
+      position: { x: 50, y: 180 }, 
+      config: {
+        'mode': 'streaming',
+        'max_tokens': 1000
+      }
+    },
+    { 
+      id: 2, 
+      type: 'process', 
+      title: 'Attribute Capture', 
+      subtitle: 'Extract key details',
+      expanded: false,
+      position: { x: 320, y: 120 },
+      config: {
+        'attribute': 'geometry',
+        'vector': 'point',
+        'dimension': 3
+      }
+    },
+    { 
+      id: 3, 
+      type: 'process', 
+      title: 'Position Setting', 
+      subtitle: 'Coordinate mapping',
+      expanded: false,
+      position: { x: 560, y: 70 },
+      config: {
+        'x': 1,
+        'y': 0,
+        'z': 0
+      }
+    },
+    { 
+      id: 4, 
+      type: 'process', 
+      title: 'Instance', 
+      subtitle: 'Points configuration',
+      expanded: false,
+      position: { x: 700, y: 150 },
+      config: {
+        'count': 120,
+        'selection': 'all',
+        'rotation': '0°'
+      }
+    },
+    { 
+      id: 5, 
+      type: 'process', 
+      title: 'Geometry Join', 
+      subtitle: 'Merge geometries',
+      expanded: false,
+      position: { x: 900, y: 220 },
+      config: {
+        'mode': 'union',
+        'normalize': true
+      }
+    },
+    { 
+      id: 6, 
+      type: 'output', 
+      title: 'Output', 
+      subtitle: 'Final result',
+      expanded: false,
+      position: { x: 1080, y: 140 },
+      config: {
+        'format': 'glb',
+        'compress': true
+      }
+    }
   ]);
 
-  const [edges, setEdges] = useState([
-    { source: 1, target: 2 },
-    { source: 1, target: 3 },
-    { source: 2, target: 4 },
-    { source: 3, target: 4 },
-    { source: 4, target: 5 },
+  const [edges, setEdges] = useState<EdgeData[]>([
+    { id: 'e1-2', source: 1, target: 2, color: 'rgba(66, 153, 225, 0.7)' },
+    { id: 'e2-3', source: 2, target: 3, color: 'rgba(66, 153, 225, 0.7)' },
+    { id: 'e3-4', source: 3, target: 4, color: 'rgba(39, 174, 96, 0.7)' },
+    { id: 'e2-4', source: 2, target: 4, color: 'rgba(66, 153, 225, 0.7)' },
+    { id: 'e4-5', source: 4, target: 5, color: 'rgba(39, 174, 96, 0.7)' },
+    { id: 'e5-6', source: 5, target: 6, color: 'rgba(39, 174, 96, 0.7)' },
   ]);
 
   const [isRunning, setIsRunning] = useState(false);
@@ -36,6 +132,14 @@ const PipelineBuilder = () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
   }, []);
+
+  const toggleNodeExpand = (nodeId: number) => {
+    setNodes(nodes.map(node => 
+      node.id === nodeId 
+        ? { ...node, expanded: !node.expanded } 
+        : node
+    ));
+  };
 
   const runPipeline = () => {
     setIsRunning(true);
@@ -72,16 +176,13 @@ const PipelineBuilder = () => {
       });
     };
     
-    const simulateExecution = async () => {
+    const simulatePath = async () => {
       await executeNode(1, 0);
-      
-      await Promise.all([
-        executeNode(2, 1000),
-        executeNode(3, 1500)
-      ]);
-      
-      await executeNode(4, 1500);
-      await executeNode(5, 1000);
+      await executeNode(2, 700);
+      await executeNode(3, 700);
+      await executeNode(4, 900);
+      await executeNode(5, 800);
+      await executeNode(6, 700);
       
       setActiveNodeId(null);
       setTimeout(() => {
@@ -90,22 +191,58 @@ const PipelineBuilder = () => {
       }, 1000);
     };
     
-    simulateExecution();
+    simulatePath();
   };
 
-  const nodeVariants = {
-    initial: { scale: 0.95, opacity: 0 },
-    animate: { scale: 1, opacity: 1, transition: { duration: 0.5 } },
-    hover: { scale: 1.05, transition: { duration: 0.2 } },
-    tap: { scale: 0.98, transition: { duration: 0.1 } },
-    active: { 
-      scale: 1.1, 
-      boxShadow: "0 0 15px rgba(66, 153, 225, 0.7)",
-      transition: { duration: 0.3 }
-    },
-    completed: {
-      borderColor: "rgb(34, 197, 94)",
-      transition: { duration: 0.3 }
+  const getNodeIcon = (type: string) => {
+    switch (type) {
+      case 'input':
+        return <FileText className="h-4 w-4" />;
+      case 'process':
+        return <Settings className="h-4 w-4" />;
+      case 'output':
+        return <Terminal className="h-4 w-4" />;
+      default:
+        return <Box className="h-4 w-4" />;
+    }
+  };
+
+  const nodeColorClass = (type: string) => {
+    switch (type) {
+      case 'input':
+        return 'border-blue-500/30 bg-blue-500/5';
+      case 'process':
+        return 'border-violet-500/30 bg-violet-500/5';
+      case 'output':
+        return 'border-emerald-500/30 bg-emerald-500/5';
+      default:
+        return 'border-gray-500/30 bg-gray-500/5';
+    }
+  };
+
+  const nodeHeaderColor = (type: string) => {
+    switch (type) {
+      case 'input':
+        return 'bg-blue-500/20 text-blue-700 dark:text-blue-300';
+      case 'process':
+        return 'bg-violet-500/20 text-violet-700 dark:text-violet-300';
+      case 'output':
+        return 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300';
+      default:
+        return 'bg-gray-500/20 text-gray-700 dark:text-gray-300';
+    }
+  };
+
+  const nodeHandleColor = (type: string) => {
+    switch (type) {
+      case 'input':
+        return 'bg-blue-500';
+      case 'process':
+        return 'bg-violet-500';
+      case 'output':
+        return 'bg-emerald-500';
+      default:
+        return 'bg-gray-500';
     }
   };
 
@@ -132,98 +269,73 @@ const PipelineBuilder = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, delay: 0.2 }}
-            className="h-[460px] neo-card p-6 relative shadow-glow"
+            className="h-[500px] neo-card p-6 relative shadow-glow bg-gradient-to-br from-background to-background/40 backdrop-blur-sm overflow-hidden"
           >
+            {/* Background grid */}
+            <div className="absolute inset-0" style={{ 
+              backgroundImage: 'radial-gradient(circle, rgba(125,125,125,0.1) 1px, transparent 1px)', 
+              backgroundSize: '20px 20px',
+              opacity: 0.3
+            }}></div>
+            
             <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-              {/* Pipeline nodes */}
-              {nodes.map((node) => (
-                <motion.div 
-                  key={node.id}
-                  className={`absolute rounded-lg shadow-md p-4 min-w-[120px] text-center cursor-move select-none
-                    ${node.type === 'input' ? 'glass dark:glass-light border-primary/50' : 
-                      node.type === 'process' ? 'glass dark:glass-light border-accent/50' : 
-                      'glass dark:glass-light border-secondary/50'}
-                    ${completedNodes.includes(node.id) ? 'border-green-500/70' : ''}
-                  `}
-                  style={{ left: node.x, top: node.y }}
-                  variants={nodeVariants}
-                  initial="initial"
-                  animate={
-                    activeNodeId === node.id 
-                      ? "active" 
-                      : completedNodes.includes(node.id) 
-                        ? "completed" 
-                        : "animate"
-                  }
-                  whileHover="hover"
-                  whileTap="tap"
-                >
-                  {node.title}
-                  {activeNodeId === node.id && (
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 h-1 mt-2 rounded-full overflow-hidden">
-                      <div 
-                        className="bg-primary h-full rounded-full transition-all duration-300"
-                        style={{ width: `${progress}%` }}
-                      ></div>
-                    </div>
-                  )}
-                  {completedNodes.includes(node.id) && (
-                    <motion.div 
-                      initial={{ scale: 0, opacity: 0 }} 
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ duration: 0.3 }}
-                      className="absolute -top-2 -right-2 bg-green-500 rounded-full p-0.5"
-                    >
-                      <CheckCircle2 className="h-4 w-4 text-white" />
-                    </motion.div>
-                  )}
-                </motion.div>
-              ))}
-
               {/* Edges between nodes */}
-              <svg className="absolute inset-0 pointer-events-none">
-                {edges.map((edge, index) => {
+              <svg className="absolute inset-0 pointer-events-none" style={{ width: '100%', height: '100%' }}>
+                <defs>
+                  <marker
+                    id="arrow"
+                    viewBox="0 0 10 10"
+                    refX="5"
+                    refY="5"
+                    markerWidth="4"
+                    markerHeight="4"
+                    orient="auto-start-reverse"
+                  >
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" />
+                  </marker>
+                </defs>
+                {edges.map((edge) => {
                   const source = nodes.find(n => n.id === edge.source);
                   const target = nodes.find(n => n.id === edge.target);
                   
                   if (!source || !target) return null;
                   
-                  // Calculate edge path
-                  const sourceX = source.x + 60;
-                  const sourceY = source.y + 25;
-                  const targetX = target.x;
-                  const targetY = target.y + 25;
+                  // Calculate source and target positions
+                  const sourceX = source.position.x + 80; // Adjust based on node width
+                  const sourceY = source.position.y + 25; // Adjust based on node height
+                  const targetX = target.position.x;
+                  const targetY = target.position.y + 25; // Adjust based on node height
                   
-                  // Check if this edge is active in the animation
-                  const isActive = 
-                    activeNodeId === edge.target && 
-                    completedNodes.includes(edge.source);
-                    
-                  // Check if edge is completed (both nodes are completed)
-                  const isCompleted = 
-                    completedNodes.includes(edge.source) && 
-                    completedNodes.includes(edge.target);
+                  // Control points for the bezier curve
+                  const controlPoint1X = sourceX + 50;
+                  const controlPoint1Y = sourceY;
+                  const controlPoint2X = targetX - 50;
+                  const controlPoint2Y = targetY;
+                  
+                  // Check if this edge is active/completed in the animation
+                  const isActive = activeNodeId === edge.target && completedNodes.includes(edge.source);
+                  const isCompleted = completedNodes.includes(edge.source) && completedNodes.includes(edge.target);
+                  
+                  // Determine edge path color
+                  const edgeColor = isCompleted 
+                    ? 'rgb(34, 197, 94)' 
+                    : (isActive ? 'currentColor' : (edge.color || 'rgba(125, 125, 125, 0.7)'));
                   
                   return (
-                    <g key={index}>
+                    <g key={edge.id}>
                       <motion.path 
-                        d={`M${sourceX},${sourceY} C${sourceX + 50},${sourceY} ${targetX - 50},${targetY} ${targetX},${targetY}`}
+                        d={`M${sourceX},${sourceY} C${controlPoint1X},${controlPoint1Y} ${controlPoint2X},${controlPoint2Y} ${targetX},${targetY}`}
                         fill="none"
-                        stroke="currentColor"
-                        strokeOpacity={isActive || isCompleted ? "1" : "0.3"}
+                        stroke={edgeColor}
+                        strokeOpacity={isActive || isCompleted ? "1" : "0.6"}
                         strokeWidth={isActive ? "3" : "2"}
-                        className={isCompleted ? "stroke-green-500" : isActive ? "stroke-primary animate-pulse" : "stroke-primary"}
+                        className={isActive ? "animate-pulse" : ""}
                         strokeDasharray={isActive ? "5,5" : ""}
                         strokeLinecap="round"
+                        markerEnd="url(#arrow)"
                         initial={{ pathLength: 0 }}
                         animate={{ pathLength: 1 }}
                         transition={{ duration: 1.5, delay: 0.2 }}
-                      />
-                      <circle 
-                        cx={targetX} 
-                        cy={targetY} 
-                        r="3" 
-                        className={isCompleted ? "fill-green-500" : "fill-primary"}
                       />
                       
                       {isActive && (
@@ -245,6 +357,116 @@ const PipelineBuilder = () => {
                   );
                 })}
               </svg>
+
+              {/* Nodes */}
+              {nodes.map((node) => {
+                // Determine if node is active or completed
+                const isActive = activeNodeId === node.id;
+                const isCompleted = completedNodes.includes(node.id);
+                
+                return (
+                  <motion.div 
+                    key={node.id}
+                    className={`absolute rounded-md shadow-lg backdrop-blur-sm border overflow-hidden
+                      ${nodeColorClass(node.type)}
+                      ${isCompleted ? 'border-green-500/70' : ''}
+                      ${isActive ? 'ring-2 ring-primary/70' : ''}
+                    `}
+                    style={{ 
+                      left: node.position.x, 
+                      top: node.position.y,
+                      width: node.expanded ? 220 : 160,
+                      transition: 'width 0.3s ease'
+                    }}
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.5 }}
+                    whileHover={{ scale: 1.02 }}
+                  >
+                    <div className={`text-xs font-medium p-2 flex justify-between items-center ${nodeHeaderColor(node.type)}`}>
+                      <div className="flex items-center gap-1.5">
+                        {getNodeIcon(node.type)}
+                        <span>{node.title}</span>
+                      </div>
+                      
+                      <motion.button
+                        onClick={() => toggleNodeExpand(node.id)}
+                        whileHover={{ scale: 1.2 }}
+                        whileTap={{ scale: 0.9 }}
+                        className="p-0.5 rounded hover:bg-black/10"
+                      >
+                        {node.expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </motion.button>
+                    </div>
+                    
+                    <div className="p-2 text-xs">
+                      <div className="text-muted-foreground mb-1">{node.subtitle}</div>
+                      
+                      {/* Node parameters (only shown when expanded) */}
+                      <AnimatePresence>
+                        {node.expanded && node.config && (
+                          <motion.div 
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="mt-2 overflow-hidden"
+                          >
+                            <div className="space-y-1.5 pt-1 border-t border-foreground/10">
+                              {Object.entries(node.config).map(([key, value]) => (
+                                <div key={key} className="flex justify-between items-center">
+                                  <span className="text-muted-foreground">{key}:</span>
+                                  <span className="font-mono bg-foreground/5 px-1 rounded text-[10px]">{value.toString()}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                    
+                    {/* Connection points */}
+                    <div className={`absolute w-3 h-3 rounded-full ${nodeHandleColor(node.type)} left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2`} />
+                    
+                    {node.type !== 'output' && (
+                      <div className={`absolute w-3 h-3 rounded-full ${nodeHandleColor(node.type)} right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2`} />
+                    )}
+                    
+                    {/* Progress indicator for active node */}
+                    {isActive && (
+                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                        <motion.div 
+                          className="h-full bg-primary"
+                          initial={{ width: "0%" }}
+                          animate={{ width: `${progress}%` }}
+                          transition={{ duration: 0.3 }}
+                        ></motion.div>
+                      </div>
+                    )}
+                    
+                    {/* Completed indicator */}
+                    {isCompleted && (
+                      <motion.div 
+                        initial={{ scale: 0, opacity: 0 }} 
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ duration: 0.3 }}
+                        className="absolute -top-2 -right-2 bg-green-500 rounded-full p-0.5"
+                      >
+                        <CheckCircle2 className="h-4 w-4 text-white" />
+                      </motion.div>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            <div className="absolute top-4 right-4 space-x-2 flex">
+              <Badge variant="outline" className="bg-background/50 backdrop-blur-sm">
+                Nodes: {nodes.length}
+              </Badge>
+              <Badge variant="outline" className="bg-background/50 backdrop-blur-sm">
+                Connections: {edges.length}
+              </Badge>
             </div>
 
             <motion.div 
@@ -258,7 +480,7 @@ const PipelineBuilder = () => {
                 disabled={isRunning}
                 className="rounded-full shadow-glow"
               >
-                {isRunning ? 'Running...' : 'Run Pipeline'} 
+                {isRunning ? 'Running Pipeline...' : 'Run Pipeline'} 
                 {isRunning ? (
                   <Circle className="ml-2 h-4 w-4 animate-spin" />
                 ) : (
