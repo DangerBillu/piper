@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { 
@@ -217,7 +217,7 @@ const DatabaseSection = () => {
   };
 
   // Update filtered databases when category or search query changes
-  React.useEffect(() => {
+  useEffect(() => {
     filterDatabases();
   }, [activeCategory, searchQuery]);
 
