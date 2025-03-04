@@ -25,7 +25,7 @@ const StepGlow = ({
   return (
     <div className={cn("relative flex items-center justify-center", sizes[size], className)}>
       <motion.div
-        className="absolute inset-0 rounded-full opacity-30"
+        className="absolute inset-0 rounded-full opacity-30 step-glow-inner"
         style={{ backgroundColor: color }}
         animate={{ 
           scale: [1, 1.1, 1],
@@ -39,7 +39,7 @@ const StepGlow = ({
       />
       
       <motion.div
-        className="absolute inset-0 rounded-full opacity-50 blur-xl"
+        className="absolute inset-0 rounded-full opacity-50 blur-xl step-glow-inner"
         style={{ backgroundColor: color }}
         animate={{ 
           scale: [1, 1.2, 1],
@@ -50,6 +50,22 @@ const StepGlow = ({
           repeat: Infinity, 
           ease: "easeInOut",
           delay: 0.5
+        }}
+      />
+      
+      {/* Add an extra layer for more vibrant effect */}
+      <motion.div
+        className="absolute inset-4 rounded-full opacity-60 blur-lg"
+        style={{ backgroundColor: color }}
+        animate={{ 
+          scale: [1, 1.15, 1],
+          opacity: [0.6, 0.4, 0.6]
+        }}
+        transition={{ 
+          duration: 4, 
+          repeat: Infinity, 
+          ease: "easeInOut",
+          delay: 0.25
         }}
       />
       

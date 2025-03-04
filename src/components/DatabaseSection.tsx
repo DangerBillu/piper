@@ -4,11 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { 
   Database, SearchIcon, Star, ArrowRight, ChevronRight, Server, 
-  Boxes, FileJson, BarChart, Workflow, Hexagon, Braces, Layers
+  Boxes, FileJson, BarChart, Workflow, Hexagon, Braces, Layers,
+  Code, ArrowUpRight, Filter, ArrowDown
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
+import { StepGlow } from '@/components/ui/step-glow';
 
 type DatabaseCategory = 'All' | 'SQL' | 'NoSQL' | 'Vector' | 'Time-Series' | 'GraphDB';
 
@@ -22,6 +24,7 @@ interface DatabaseOption {
   new?: boolean;
   icon: React.ReactNode;
   code?: string;
+  color: string;
 }
 
 // Sample code blocks for each database
@@ -103,7 +106,8 @@ const databases: DatabaseOption[] = [
     provider: 'PostgreSQL Global Development Group',
     stars: 4.8,
     icon: <Database className="h-6 w-6 text-blue-500" />,
-    code: postgresCode
+    code: postgresCode,
+    color: '#3498db'
   },
   {
     id: 'mongodb',
@@ -113,7 +117,8 @@ const databases: DatabaseOption[] = [
     provider: 'MongoDB, Inc.',
     stars: 4.7,
     icon: <Layers className="h-6 w-6 text-green-500" />,
-    code: mongoCode
+    code: mongoCode,
+    color: '#27ae60'
   },
   {
     id: 'pinecone',
@@ -124,7 +129,8 @@ const databases: DatabaseOption[] = [
     stars: 4.6,
     new: true,
     icon: <Hexagon className="h-6 w-6 text-purple-500" />,
-    code: pineconeCode
+    code: pineconeCode,
+    color: '#9b59b6'
   },
   {
     id: 'mysql',
@@ -134,6 +140,7 @@ const databases: DatabaseOption[] = [
     provider: 'Oracle',
     stars: 4.5,
     icon: <Database className="h-6 w-6 text-blue-400" />,
+    color: '#2980b9'
   },
   {
     id: 'redis',
@@ -143,6 +150,7 @@ const databases: DatabaseOption[] = [
     provider: 'Redis Ltd.',
     stars: 4.7,
     icon: <Server className="h-6 w-6 text-red-500" />,
+    color: '#e74c3c'
   },
   {
     id: 'neo4j',
@@ -152,6 +160,7 @@ const databases: DatabaseOption[] = [
     provider: 'Neo4j, Inc.',
     stars: 4.4,
     icon: <Workflow className="h-6 w-6 text-orange-500" />,
+    color: '#e67e22'
   },
   {
     id: 'chroma',
@@ -162,6 +171,7 @@ const databases: DatabaseOption[] = [
     stars: 4.3,
     new: true,
     icon: <FileJson className="h-6 w-6 text-violet-500" />,
+    color: '#8e44ad'
   },
   {
     id: 'timescaledb',
@@ -171,6 +181,7 @@ const databases: DatabaseOption[] = [
     provider: 'Timescale',
     stars: 4.5,
     icon: <BarChart className="h-6 w-6 text-cyan-500" />,
+    color: '#00CED1'
   },
   {
     id: 'weaviate',
@@ -180,6 +191,7 @@ const databases: DatabaseOption[] = [
     provider: 'SeMI Technologies',
     stars: 4.4,
     icon: <Braces className="h-6 w-6 text-pink-500" />,
+    color: '#FF69B4'
   },
 ];
 
@@ -188,6 +200,8 @@ const DatabaseSection = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredDatabases, setFilteredDatabases] = useState(databases);
   const [activeDatabase, setActiveDatabase] = useState<string | null>('postgresql');
+  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
+  const [sortBy, setSortBy] = useState<'stars' | 'name'>('stars');
 
   const categories: DatabaseCategory[] = ['All', 'SQL', 'NoSQL', 'Vector', 'Time-Series', 'GraphDB'];
 
@@ -208,6 +222,13 @@ const DatabaseSection = () => {
       );
     }
     
+    // Sort the results
+    if (sortBy === 'stars') {
+      result.sort((a, b) => b.stars - a.stars);
+    } else if (sortBy === 'name') {
+      result.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    
     setFilteredDatabases(result);
     
     // Set the active database to the first result if the current active database is filtered out
@@ -219,11 +240,16 @@ const DatabaseSection = () => {
   // Update filtered databases when category or search query changes
   useEffect(() => {
     filterDatabases();
-  }, [activeCategory, searchQuery]);
+  }, [activeCategory, searchQuery, sortBy]);
 
   const getActiveDbCode = () => {
     const db = databases.find(db => db.id === activeDatabase);
     return db?.code || '// No connection code example available for this database.';
+  };
+
+  const getActiveDbColor = () => {
+    const db = databases.find(db => db.id === activeDatabase);
+    return db?.color || '#3498db';
   };
 
   return (
@@ -281,140 +307,250 @@ const DatabaseSection = () => {
           </p>
         </motion.div>
 
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div className="flex flex-wrap gap-2">
-              {categories.map(category => (
-                <Button
-                  key={category}
-                  variant={activeCategory === category ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setActiveCategory(category)}
-                  className="rounded-full"
-                >
-                  {category === 'All' && <Boxes className="h-4 w-4 mr-1" />}
-                  {category === 'SQL' && <Database className="h-4 w-4 mr-1" />}
-                  {category === 'NoSQL' && <Layers className="h-4 w-4 mr-1" />}
-                  {category === 'Vector' && <Hexagon className="h-4 w-4 mr-1" />}
-                  {category === 'Time-Series' && <BarChart className="h-4 w-4 mr-1" />}
-                  {category === 'GraphDB' && <Workflow className="h-4 w-4 mr-1" />}
-                  <span>{category}</span>
-                </Button>
-              ))}
-            </div>
-            
-            <div className="relative w-full sm:w-auto mt-4 sm:mt-0">
-              <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search databases..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-9 w-full sm:w-[250px] rounded-full"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1 space-y-6">
-            {filteredDatabases.map(database => (
-              <motion.div
-                key={database.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5 }}
-                whileHover={{ scale: 1.02 }}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
+          {/* Featured database visualization */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7 }}
+            className="lg:col-span-5 flex items-center justify-center"
+          >
+            <div className="relative w-full h-[350px] flex items-center justify-center">
+              <StepGlow 
+                color={getActiveDbColor()} 
+                size="lg"
+                className="absolute"
               >
-                <Card 
-                  className={`backdrop-blur-sm border overflow-hidden hover:shadow-md transition-shadow cursor-pointer
-                            ${activeDatabase === database.id 
-                              ? 'bg-gradient-to-br from-background/80 to-background/40 border-primary/50 shadow-[0_0_10px_rgba(59,130,246,0.2)]' 
-                              : 'bg-background/50 dark:bg-background/20'}`}
-                  onClick={() => setActiveDatabase(database.id)}
-                >
-                  <div className="p-6">
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-full bg-background/50 dark:bg-background/20 border border-border/50">
-                          {database.icon}
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-lg flex items-center">
-                            {database.name}
-                            {activeDatabase === database.id && (
-                              <ChevronRight className="h-4 w-4 ml-2 text-primary animate-bounce" />
-                            )}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">{database.provider}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        <Star className="h-4 w-4 text-yellow-400 fill-yellow-400 mr-1" />
-                        <span className="text-sm font-medium">{database.stars}</span>
-                      </div>
-                    </div>
-                    
-                    <p className="text-sm mb-4 line-clamp-2">{database.description}</p>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex gap-2">
-                        <Badge variant="outline" className="flex items-center gap-1 text-xs">
-                          {database.category === 'SQL' && <Database className="h-3 w-3" />}
-                          {database.category === 'NoSQL' && <Layers className="h-3 w-3" />}
-                          {database.category === 'Vector' && <Hexagon className="h-3 w-3" />}
-                          {database.category === 'Time-Series' && <BarChart className="h-3 w-3" />}
-                          {database.category === 'GraphDB' && <Workflow className="h-3 w-3" />}
-                          {database.category}
-                        </Badge>
-                        {database.new && (
-                          <Badge className="bg-primary text-xs">New</Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </Card>
+                <div className="h-32 w-32 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center border border-white/10">
+                  {databases.find(db => db.id === activeDatabase)?.icon || 
+                    <Database className="h-12 w-12 text-primary" />}
+                </div>
+              </StepGlow>
+              
+              {/* Connection lines */}
+              <motion.div 
+                className="absolute inset-0 pointer-events-none"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5, duration: 0.5 }}
+              >
+                {[...Array(8)].map((_, i) => (
+                  <motion.div 
+                    key={i}
+                    className="absolute w-24 h-[1px] bg-gradient-to-r"
+                    style={{
+                      top: `${50 + 25 * Math.sin(i * Math.PI / 4)}%`,
+                      left: `${50 + 25 * Math.cos(i * Math.PI / 4)}%`,
+                      transform: `rotate(${i * 45}deg)`,
+                      transformOrigin: 'left center',
+                      backgroundImage: `linear-gradient(to right, transparent, ${getActiveDbColor()})`,
+                    }}
+                    initial={{ scaleX: 0, opacity: 0 }}
+                    animate={{ scaleX: 1, opacity: 0.6 }}
+                    transition={{ delay: 0.5 + i * 0.1, duration: 0.5 }}
+                  />
+                ))}
               </motion.div>
-            ))}
-          </div>
+              
+              {/* Feature badges */}
+              <motion.div 
+                className="absolute inset-0 pointer-events-none"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1, duration: 0.5 }}
+              >
+                {['Scalable', 'Fast', 'Reliable', 'Secure', 'Cloud-native'].map((feature, i) => (
+                  <motion.div 
+                    key={i}
+                    className="absolute bg-background/70 backdrop-blur-sm px-3 py-1 rounded-full border border-white/10 text-sm"
+                    style={{
+                      top: `${35 + 35 * Math.sin(i * Math.PI * 2 / 5)}%`,
+                      left: `${35 + 35 * Math.cos(i * Math.PI * 2 / 5)}%`,
+                    }}
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 1 + i * 0.15, duration: 0.5 }}
+                  >
+                    {feature}
+                  </motion.div>
+                ))}
+              </motion.div>
+            </div>
+          </motion.div>
           
-          <div className="lg:col-span-2">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.7, delay: 0.2 }}
-            >
-              <Card className="neo-card overflow-hidden backdrop-blur-md bg-gradient-to-br from-background/60 to-background/40 border border-border/50">
-                <div className="p-6">
-                  <h3 className="text-xl font-bold mb-4">Connect with a few lines of code</h3>
-                  <p className="text-muted-foreground mb-6">
-                    Integrate with your database of choice using our simple SDK. Just a few lines of code to start storing and querying your data.
-                  </p>
-                  
-                  <div className="relative">
-                    <pre className="code-block text-xs md:text-sm bg-background/50 dark:bg-background/30 border border-border/50 rounded-lg p-4 overflow-auto max-h-[350px]">
-                      <code className="text-foreground/90">{getActiveDbCode()}</code>
-                    </pre>
-                    
-                    <div className="absolute top-2 right-2 flex gap-1">
-                      <div className="h-3 w-3 rounded-full bg-red-500"></div>
-                      <div className="h-3 w-3 rounded-full bg-yellow-500"></div>
-                      <div className="h-3 w-3 rounded-full bg-green-500"></div>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-6 flex flex-wrap gap-4">
-                    <Badge variant="outline" className="px-3 py-1">One-click setup</Badge>
-                    <Badge variant="outline" className="px-3 py-1">Auto-scaling</Badge>
-                    <Badge variant="outline" className="px-3 py-1">Real-time sync</Badge>
-                    <Badge variant="outline" className="px-3 py-1">Versioning</Badge>
-                    <Badge variant="outline" className="px-3 py-1">Backups</Badge>
+          {/* Database selection and code */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7, delay: 0.2 }}
+            className="lg:col-span-7"
+          >
+            <Card className="neo-card overflow-hidden backdrop-blur-md bg-gradient-to-br from-background/60 to-background/40 border border-border/50">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xl font-bold">Connect with a few lines of code</h3>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="rounded-full"
+                      onClick={() => setSortBy('stars')}
+                    >
+                      <Star className={`h-4 w-4 mr-1 ${sortBy === 'stars' ? 'text-yellow-400 fill-yellow-400' : ''}`} />
+                      <span>Rating</span>
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="rounded-full"
+                      onClick={() => setSortBy('name')}
+                    >
+                      <ArrowDown className={`h-4 w-4 mr-1 ${sortBy === 'name' ? 'text-primary' : ''}`} />
+                      <span>Name</span>
+                    </Button>
                   </div>
                 </div>
-              </Card>
-            </motion.div>
-          </div>
+                
+                <div className="flex mb-4 justify-between items-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+                    className="text-muted-foreground"
+                  >
+                    <Filter className="h-4 w-4 mr-1" />
+                    <span>Filters</span>
+                    {isFilterExpanded ? 
+                      <ChevronRight className="h-4 w-4 ml-1 rotate-90 transition-transform" /> : 
+                      <ChevronRight className="h-4 w-4 ml-1 transition-transform" />
+                    }
+                  </Button>
+                  
+                  <div className="relative">
+                    <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search databases..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9 h-9 w-full sm:w-[250px] rounded-full"
+                    />
+                  </div>
+                </div>
+                
+                {isFilterExpanded && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="mb-4 overflow-hidden"
+                  >
+                    <div className="flex flex-wrap gap-2 py-2">
+                      {categories.map(category => (
+                        <Button
+                          key={category}
+                          variant={activeCategory === category ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setActiveCategory(category)}
+                          className="rounded-full"
+                        >
+                          {category === 'All' && <Boxes className="h-4 w-4 mr-1" />}
+                          {category === 'SQL' && <Database className="h-4 w-4 mr-1" />}
+                          {category === 'NoSQL' && <Layers className="h-4 w-4 mr-1" />}
+                          {category === 'Vector' && <Hexagon className="h-4 w-4 mr-1" />}
+                          {category === 'Time-Series' && <BarChart className="h-4 w-4 mr-1" />}
+                          {category === 'GraphDB' && <Workflow className="h-4 w-4 mr-1" />}
+                          <span>{category}</span>
+                        </Button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+                  {filteredDatabases.map(database => (
+                    <motion.div
+                      key={database.id}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      whileHover={{ scale: 1.02 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <Card 
+                        className={`h-full cursor-pointer border overflow-hidden transition-all duration-200
+                                  ${activeDatabase === database.id 
+                                    ? 'bg-gradient-to-br from-background/80 to-background/40 border-primary/50 shadow-[0_0_10px_rgba(59,130,246,0.2)]' 
+                                    : 'bg-background/50 hover:bg-background/70'}`}
+                        onClick={() => setActiveDatabase(database.id)}
+                      >
+                        <div className="p-4">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className={`p-2 rounded-full bg-${database.color}/10 border border-${database.color}/20`} style={{ backgroundColor: `${database.color}20` }}>
+                              {database.icon}
+                            </div>
+                            <div>
+                              <div className="flex items-center">
+                                <h3 className="font-medium text-sm">
+                                  {database.name}
+                                </h3>
+                                {database.new && (
+                                  <Badge className="ml-2 bg-primary text-[10px] px-1 py-0">NEW</Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center text-xs text-muted-foreground">
+                                <Star className="h-3 w-3 text-yellow-400 fill-yellow-400 mr-1" />
+                                <span>{database.stars}</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {activeDatabase === database.id && (
+                            <div className="absolute top-2 right-2">
+                              <ChevronRight className="h-4 w-4 text-primary animate-pulse" />
+                            </div>
+                          )}
+                          
+                          <Badge variant="outline" className="text-[10px] my-1">
+                            {database.category}
+                          </Badge>
+                        </div>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </div>
+                
+                <div className="relative">
+                  <div className="absolute top-2 right-2 flex gap-1">
+                    <div className="h-3 w-3 rounded-full bg-red-500"></div>
+                    <div className="h-3 w-3 rounded-full bg-yellow-500"></div>
+                    <div className="h-3 w-3 rounded-full bg-green-500"></div>
+                  </div>
+                  <pre className="code-block text-xs md:text-sm bg-background/50 dark:bg-background/30 border border-border/50 rounded-lg p-4 overflow-auto max-h-[200px]">
+                    <code className="text-foreground/90">{getActiveDbCode()}</code>
+                  </pre>
+                </div>
+                
+                <div className="flex justify-between items-center mt-6">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline" className="px-2 py-1 text-xs">Auto-scaling</Badge>
+                    <Badge variant="outline" className="px-2 py-1 text-xs">Real-time sync</Badge>
+                  </div>
+                  
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    className="text-xs flex items-center gap-1 text-primary"
+                  >
+                    <Code className="h-3.5 w-3.5" />
+                    <span>View Documentation</span>
+                    <ArrowUpRight className="h-3 w-3 ml-1" />
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
         </div>
 
         <motion.div 
@@ -422,7 +558,7 @@ const DatabaseSection = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7, delay: 0.4 }}
-          className="mt-16 text-center"
+          className="mt-8 text-center"
         >
           <Button 
             size="lg" 

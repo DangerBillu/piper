@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -126,8 +127,49 @@ const PipelineBuilder = () => {
   const [completedNodes, setCompletedNodes] = useState<number[]>([]);
   const [progress, setProgress] = useState(0);
   const [draggingNodeId, setDraggingNodeId] = useState<number | null>(null);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+
+  // Get container dimensions
+  useEffect(() => {
+    if (containerRef.current) {
+      const updateSize = () => {
+        if (containerRef.current) {
+          const rect = containerRef.current.getBoundingClientRect();
+          setContainerSize({ width: rect.width, height: rect.height });
+        }
+      };
+      
+      updateSize();
+      window.addEventListener('resize', updateSize);
+      
+      return () => {
+        window.removeEventListener('resize', updateSize);
+      };
+    }
+  }, []);
+
+  // Position nodes to fit within container if they're outside
+  useEffect(() => {
+    if (containerSize.width > 0 && containerSize.height > 0) {
+      setNodes(prevNodes => 
+        prevNodes.map(node => {
+          const nodeWidth = node.expanded ? 220 : 160;
+          const nodeHeight = 60;
+          
+          // Ensure node is within container bounds
+          const x = Math.max(0, Math.min(node.position.x, containerSize.width - nodeWidth));
+          const y = Math.max(0, Math.min(node.position.y, containerSize.height - nodeHeight));
+          
+          return {
+            ...node,
+            position: { x, y }
+          };
+        })
+      );
+    }
+  }, [containerSize]);
 
   useEffect(() => {
     return () => {
@@ -145,13 +187,14 @@ const PipelineBuilder = () => {
   };
 
   const updateNodePosition = (nodeId: number, newPosition: { x: number; y: number }) => {
-    const containerRect = containerRef.current?.getBoundingClientRect();
-    if (!containerRect) return;
+    if (containerSize.width <= 0 || containerSize.height <= 0) return;
     
-    const nodeWidth = 160;
+    const nodeWidth = nodes.find(n => n.id === nodeId)?.expanded ? 220 : 160;
     const nodeHeight = 60;
-    const x = Math.max(0, Math.min(newPosition.x, containerRect.width - nodeWidth));
-    const y = Math.max(0, Math.min(newPosition.y, containerRect.height - nodeHeight));
+    
+    // Constrain to container bounds
+    const x = Math.max(0, Math.min(newPosition.x, containerSize.width - nodeWidth));
+    const y = Math.max(0, Math.min(newPosition.y, containerSize.height - nodeHeight));
     
     setNodes(nodes.map(node => 
       node.id === nodeId 
@@ -325,7 +368,11 @@ const PipelineBuilder = () => {
                   
                   if (!source || !target) return null;
                   
-                  const sourceX = source.position.x + 80;
+                  // Get width of source node
+                  const sourceWidth = source.expanded ? 220 : 160;
+                  
+                  // Calculate connection points
+                  const sourceX = source.position.x + sourceWidth;
                   const sourceY = source.position.y + 25;
                   const targetX = target.position.x;
                   const targetY = target.position.y + 25;
@@ -383,6 +430,7 @@ const PipelineBuilder = () => {
                 const isActive = activeNodeId === node.id;
                 const isCompleted = completedNodes.includes(node.id);
                 const isDragging = draggingNodeId === node.id;
+                const nodeWidth = node.expanded ? 220 : 160;
                 
                 return (
                   <motion.div 
@@ -396,7 +444,7 @@ const PipelineBuilder = () => {
                     style={{ 
                       left: node.position.x, 
                       top: node.position.y,
-                      width: node.expanded ? 220 : 160,
+                      width: nodeWidth,
                       transition: isDragging ? 'none' : 'width 0.3s ease'
                     }}
                     initial={{ scale: 0.95, opacity: 0 }}
@@ -409,8 +457,7 @@ const PipelineBuilder = () => {
                     onDragStart={() => handleDragStart(node.id)}
                     onDragEnd={handleDragEnd}
                     onDrag={(_, info) => {
-                      const containerRect = containerRef.current?.getBoundingClientRect();
-                      if (containerRect) {
+                      if (containerRef.current) {
                         const x = node.position.x + info.delta.x;
                         const y = node.position.y + info.delta.y;
                         updateNodePosition(node.id, { x, y });
@@ -540,9 +587,10 @@ const PipelineBuilder = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, delay: 0.4 }}
-            className="max-h-[500px] overflow-auto"
           >
-            <CodeViewer />
+            <div className="max-h-[500px] overflow-auto custom-scrollbar">
+              <CodeViewer />
+            </div>
           </motion.div>
         </div>
 
