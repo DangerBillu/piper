@@ -1,14 +1,14 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
   ArrowRight, Play, Circle, CheckCircle2, Zap, 
   Box, ChevronDown, AlignJustify, Settings, 
-  ChevronUp, Terminal, Bot, Image as ImageIcon, FileText
+  ChevronUp, Terminal, Bot, Image as ImageIcon, FileText,
+  MoveHorizontal
 } from 'lucide-react';
 import CodeViewer from '@/components/CodeViewer';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 
 interface NodeData {
@@ -19,7 +19,7 @@ interface NodeData {
   expanded?: boolean;
   position: { x: number; y: number };
   config?: {
-    [key: string]: string | number;
+    [key: string]: string | number | boolean;
   }
 }
 
@@ -32,7 +32,8 @@ interface EdgeData {
 }
 
 const PipelineBuilder = () => {
-  // Fixed the TypeScript error by ensuring expanded is boolean but stored as 0 or 1 in positions
+  const containerRef = useRef<HTMLDivElement>(null);
+  
   const [nodes, setNodes] = useState<NodeData[]>([
     { 
       id: 1, 
@@ -40,7 +41,7 @@ const PipelineBuilder = () => {
       title: 'Text Input', 
       subtitle: 'User prompt',
       expanded: false,
-      position: { x: 30, y: 180 }, // Adjusted positions to fit inside the container
+      position: { x: 30, y: 180 },
       config: {
         'mode': 'streaming',
         'max_tokens': 1000
@@ -52,7 +53,7 @@ const PipelineBuilder = () => {
       title: 'Attribute Capture', 
       subtitle: 'Extract key details',
       expanded: false,
-      position: { x: 250, y: 120 }, // Adjusted positions
+      position: { x: 250, y: 120 },
       config: {
         'attribute': 'geometry',
         'vector': 'point',
@@ -65,7 +66,7 @@ const PipelineBuilder = () => {
       title: 'Position Setting', 
       subtitle: 'Coordinate mapping',
       expanded: false,
-      position: { x: 450, y: 70 }, // Adjusted positions
+      position: { x: 450, y: 70 },
       config: {
         'x': 1,
         'y': 0,
@@ -78,7 +79,7 @@ const PipelineBuilder = () => {
       title: 'Instance', 
       subtitle: 'Points configuration',
       expanded: false,
-      position: { x: 600, y: 150 }, // Adjusted positions
+      position: { x: 600, y: 150 },
       config: {
         'count': 120,
         'selection': 'all',
@@ -91,7 +92,7 @@ const PipelineBuilder = () => {
       title: 'Geometry Join', 
       subtitle: 'Merge geometries',
       expanded: false,
-      position: { x: 750, y: 220 }, // Adjusted positions
+      position: { x: 750, y: 220 },
       config: {
         'mode': 'union',
         'normalize': true
@@ -103,7 +104,7 @@ const PipelineBuilder = () => {
       title: 'Output', 
       subtitle: 'Final result',
       expanded: false,
-      position: { x: 900, y: 140 }, // Adjusted positions
+      position: { x: 900, y: 140 },
       config: {
         'format': 'glb',
         'compress': true
@@ -124,6 +125,7 @@ const PipelineBuilder = () => {
   const [activeNodeId, setActiveNodeId] = useState<number | null>(null);
   const [completedNodes, setCompletedNodes] = useState<number[]>([]);
   const [progress, setProgress] = useState(0);
+  const [draggingNodeId, setDraggingNodeId] = useState<number | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const animationFrameRef = useRef<number | null>(null);
 
@@ -142,6 +144,30 @@ const PipelineBuilder = () => {
     ));
   };
 
+  const updateNodePosition = (nodeId: number, newPosition: { x: number; y: number }) => {
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    if (!containerRect) return;
+    
+    const nodeWidth = 160;
+    const nodeHeight = 60;
+    const x = Math.max(0, Math.min(newPosition.x, containerRect.width - nodeWidth));
+    const y = Math.max(0, Math.min(newPosition.y, containerRect.height - nodeHeight));
+    
+    setNodes(nodes.map(node => 
+      node.id === nodeId 
+        ? { ...node, position: { x, y } } 
+        : node
+    ));
+  };
+
+  const handleDragStart = (nodeId: number) => {
+    setDraggingNodeId(nodeId);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingNodeId(null);
+  };
+
   const runPipeline = () => {
     setIsRunning(true);
     setActiveNodeId(1);
@@ -155,9 +181,8 @@ const PipelineBuilder = () => {
         timeoutRef.current = setTimeout(() => {
           setActiveNodeId(nodeId);
           
-          // Animate progress from 0 to 100%
           let startTime = Date.now();
-          const duration = 1000; // 1 second
+          const duration = 1000;
           
           const updateProgress = () => {
             const elapsed = Date.now() - startTime;
@@ -271,8 +296,8 @@ const PipelineBuilder = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.7, delay: 0.2 }}
             className="h-[500px] neo-card p-6 relative shadow-glow bg-gradient-to-br from-background to-background/40 backdrop-blur-sm overflow-hidden"
+            ref={containerRef}
           >
-            {/* Background grid */}
             <div className="absolute inset-0" style={{ 
               backgroundImage: 'radial-gradient(circle, rgba(125,125,125,0.1) 1px, transparent 1px)', 
               backgroundSize: '20px 20px',
@@ -280,7 +305,6 @@ const PipelineBuilder = () => {
             }}></div>
             
             <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-              {/* Edges between nodes */}
               <svg className="absolute inset-0 pointer-events-none" style={{ width: '100%', height: '100%' }}>
                 <defs>
                   <marker
@@ -301,23 +325,19 @@ const PipelineBuilder = () => {
                   
                   if (!source || !target) return null;
                   
-                  // Calculate source and target positions
-                  const sourceX = source.position.x + 80; // Adjust based on node width
-                  const sourceY = source.position.y + 25; // Adjust based on node height
+                  const sourceX = source.position.x + 80;
+                  const sourceY = source.position.y + 25;
                   const targetX = target.position.x;
-                  const targetY = target.position.y + 25; // Adjust based on node height
+                  const targetY = target.position.y + 25;
                   
-                  // Control points for the bezier curve
                   const controlPoint1X = sourceX + 50;
                   const controlPoint1Y = sourceY;
                   const controlPoint2X = targetX - 50;
                   const controlPoint2Y = targetY;
                   
-                  // Check if this edge is active/completed in the animation
                   const isActive = activeNodeId === edge.target && completedNodes.includes(edge.source);
                   const isCompleted = completedNodes.includes(edge.source) && completedNodes.includes(edge.target);
                   
-                  // Determine edge path color
                   const edgeColor = isCompleted 
                     ? 'rgb(34, 197, 94)' 
                     : (isActive ? 'currentColor' : (edge.color || 'rgba(125, 125, 125, 0.7)'));
@@ -359,29 +379,43 @@ const PipelineBuilder = () => {
                 })}
               </svg>
 
-              {/* Nodes */}
               {nodes.map((node) => {
-                // Determine if node is active or completed
                 const isActive = activeNodeId === node.id;
                 const isCompleted = completedNodes.includes(node.id);
+                const isDragging = draggingNodeId === node.id;
                 
                 return (
                   <motion.div 
                     key={node.id}
-                    className={`absolute rounded-md shadow-lg backdrop-blur-sm border overflow-hidden
+                    className={`absolute rounded-md shadow-lg backdrop-blur-sm border overflow-hidden cursor-move
                       ${nodeColorClass(node.type)}
                       ${isCompleted ? 'border-green-500/70' : ''}
                       ${isActive ? 'ring-2 ring-primary/70' : ''}
+                      ${isDragging ? 'z-50 shadow-xl ring-2 ring-primary/40' : ''}
                     `}
                     style={{ 
                       left: node.position.x, 
                       top: node.position.y,
                       width: node.expanded ? 220 : 160,
-                      transition: 'width 0.3s ease'
+                      transition: isDragging ? 'none' : 'width 0.3s ease'
                     }}
                     initial={{ scale: 0.95, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.5 }}
+                    drag
+                    dragConstraints={containerRef}
+                    dragElastic={0}
+                    dragMomentum={false}
+                    onDragStart={() => handleDragStart(node.id)}
+                    onDragEnd={handleDragEnd}
+                    onDrag={(_, info) => {
+                      const containerRect = containerRef.current?.getBoundingClientRect();
+                      if (containerRect) {
+                        const x = node.position.x + info.delta.x;
+                        const y = node.position.y + info.delta.y;
+                        updateNodePosition(node.id, { x, y });
+                      }
+                    }}
                   >
                     <div className={`text-xs font-medium p-2 flex justify-between items-center ${nodeHeaderColor(node.type)}`}>
                       <div className="flex items-center gap-1.5">
@@ -389,20 +423,29 @@ const PipelineBuilder = () => {
                         <span>{node.title}</span>
                       </div>
                       
-                      <motion.button
-                        onClick={() => toggleNodeExpand(node.id)}
-                        whileHover={{ scale: 1.2 }}
-                        whileTap={{ scale: 0.9 }}
-                        className="p-0.5 rounded hover:bg-black/10"
-                      >
-                        {node.expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                      </motion.button>
+                      <div className="flex items-center">
+                        <motion.div
+                          className="p-0.5 rounded hover:bg-black/10 mr-1"
+                          whileHover={{ scale: 1.2 }}
+                          whileTap={{ scale: 0.9 }}
+                        >
+                          <MoveHorizontal size={12} className="opacity-60" />
+                        </motion.div>
+                        
+                        <motion.button
+                          onClick={() => toggleNodeExpand(node.id)}
+                          whileHover={{ scale: 1.2 }}
+                          whileTap={{ scale: 0.9 }}
+                          className="p-0.5 rounded hover:bg-black/10"
+                        >
+                          {node.expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        </motion.button>
+                      </div>
                     </div>
                     
                     <div className="p-2 text-xs">
                       <div className="text-muted-foreground mb-1">{node.subtitle}</div>
                       
-                      {/* Node parameters (only shown when expanded) */}
                       <AnimatePresence>
                         {node.expanded && node.config && (
                           <motion.div 
@@ -425,14 +468,12 @@ const PipelineBuilder = () => {
                       </AnimatePresence>
                     </div>
                     
-                    {/* Connection points */}
                     <div className={`absolute w-3 h-3 rounded-full ${nodeHandleColor(node.type)} left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2`} />
                     
                     {node.type !== 'output' && (
                       <div className={`absolute w-3 h-3 rounded-full ${nodeHandleColor(node.type)} right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2`} />
                     )}
                     
-                    {/* Progress indicator for active node */}
                     {isActive && (
                       <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-700 overflow-hidden">
                         <motion.div 
@@ -444,7 +485,6 @@ const PipelineBuilder = () => {
                       </div>
                     )}
                     
-                    {/* Completed indicator */}
                     {isCompleted && (
                       <motion.div 
                         initial={{ scale: 0, opacity: 0 }} 
@@ -500,6 +540,7 @@ const PipelineBuilder = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, delay: 0.4 }}
+            className="max-h-[500px] overflow-auto"
           >
             <CodeViewer />
           </motion.div>

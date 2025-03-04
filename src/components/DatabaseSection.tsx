@@ -1,422 +1,261 @@
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Database, Server, Shield, Code, Globe, Zap, ArrowRight, Box, Activity, Lock, Cloud } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Card } from '@/components/ui/card';
+import { 
+  Database, SearchIcon, Star, ArrowRight, ChevronRight, Server, 
+  Boxes, FileJson, BarChart, Workflow, Hexagon, Braces, Layers
+} from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { motion } from 'framer-motion';
+
+type DatabaseCategory = 'All' | 'SQL' | 'NoSQL' | 'Vector' | 'Time-Series' | 'GraphDB';
+
+interface DatabaseOption {
+  id: string;
+  name: string;
+  description: string;
+  category: DatabaseCategory;
+  provider: string;
+  stars: number;
+  new?: boolean;
+  icon: React.ReactNode;
+  code?: string;
+}
+
+// Sample code blocks for each database
+const postgresCode = `
+// Connect to PostgreSQL
+import { Client } from 'pg';
+
+const client = new Client({
+  host: process.env.PG_HOST,
+  port: 5432,
+  database: 'my_database',
+  user: process.env.PG_USER,
+  password: process.env.PG_PASSWORD,
+});
+
+await client.connect();
+
+// Execute a query
+const result = await client.query(
+  'SELECT * FROM users WHERE status = $1',
+  ['active']
+);
+
+console.log(result.rows);
+`;
+
+const mongoCode = `
+// Connect to MongoDB
+import { MongoClient } from 'mongodb';
+
+const uri = \`mongodb+srv://\${process.env.MONGO_USER}:\${process.env.MONGO_PASSWORD}@cluster0.mongodb.net/?retryWrites=true&w=majority\`;
+const client = new MongoClient(uri);
+
+await client.connect();
+
+// Query the database
+const database = client.db('my_database');
+const collection = database.collection('users');
+
+const query = { status: 'active' };
+const users = await collection.find(query).toArray();
+
+console.log(users);
+`;
+
+const pineconeCode = `
+// Connect to Pinecone
+import { Pinecone } from '@pinecone-database/pinecone';
+
+const pinecone = new Pinecone({
+  apiKey: process.env.PINECONE_API_KEY,
+});
+
+const index = pinecone.Index('my-index');
+
+// Upsert vectors
+await index.upsert([
+  {
+    id: 'vec1',
+    values: [0.1, 0.2, 0.3, ...], // 1536-dim embedding vector
+    metadata: { text: 'Sample document', category: 'article' }
+  }
+]);
+
+// Vector search
+const results = await index.query({
+  vector: [0.1, 0.2, 0.3, ...],
+  topK: 5,
+  includeMetadata: true
+});
+`;
+
+const databases: DatabaseOption[] = [
+  {
+    id: 'postgresql',
+    name: 'PostgreSQL',
+    description: 'Powerful, open source object-relational database system with strong reputation for reliability and performance.',
+    category: 'SQL',
+    provider: 'PostgreSQL Global Development Group',
+    stars: 4.8,
+    icon: <Database className="h-6 w-6 text-blue-500" />,
+    code: postgresCode
+  },
+  {
+    id: 'mongodb',
+    name: 'MongoDB Atlas',
+    description: 'Fully-managed document database designed for modern applications, with automatic scaling and multi-cloud distribution.',
+    category: 'NoSQL',
+    provider: 'MongoDB, Inc.',
+    stars: 4.7,
+    icon: <Layers className="h-6 w-6 text-green-500" />,
+    code: mongoCode
+  },
+  {
+    id: 'pinecone',
+    name: 'Pinecone Vector DB',
+    description: 'Managed vector database designed for vector search at scale, optimized for AI and machine learning applications.',
+    category: 'Vector',
+    provider: 'Pinecone',
+    stars: 4.6,
+    new: true,
+    icon: <Hexagon className="h-6 w-6 text-purple-500" />,
+    code: pineconeCode
+  },
+  {
+    id: 'mysql',
+    name: 'MySQL',
+    description: 'Popular open-source relational database management system, known for its reliability and ease of use.',
+    category: 'SQL',
+    provider: 'Oracle',
+    stars: 4.5,
+    icon: <Database className="h-6 w-6 text-blue-400" />,
+  },
+  {
+    id: 'redis',
+    name: 'Redis',
+    description: 'In-memory data structure store used as a database, cache, and message broker with optional persistence.',
+    category: 'NoSQL',
+    provider: 'Redis Ltd.',
+    stars: 4.7,
+    icon: <Server className="h-6 w-6 text-red-500" />,
+  },
+  {
+    id: 'neo4j',
+    name: 'Neo4j',
+    description: 'Native graph database platform designed for storing and querying highly connected data with relationships.',
+    category: 'GraphDB',
+    provider: 'Neo4j, Inc.',
+    stars: 4.4,
+    icon: <Workflow className="h-6 w-6 text-orange-500" />,
+  },
+  {
+    id: 'chroma',
+    name: 'Chroma DB',
+    description: 'Open-source embedding database for AI applications with simple API for storing and searching vectors and metadata.',
+    category: 'Vector',
+    provider: 'Chroma',
+    stars: 4.3,
+    new: true,
+    icon: <FileJson className="h-6 w-6 text-violet-500" />,
+  },
+  {
+    id: 'timescaledb',
+    name: 'TimescaleDB',
+    description: 'Open-source time-series SQL database optimized for fast ingest and complex queries, built on PostgreSQL.',
+    category: 'Time-Series',
+    provider: 'Timescale',
+    stars: 4.5,
+    icon: <BarChart className="h-6 w-6 text-cyan-500" />,
+  },
+  {
+    id: 'weaviate',
+    name: 'Weaviate',
+    description: 'Open-source vector database that stores both objects and vectors for cloud-native, ML-first applications.',
+    category: 'Vector',
+    provider: 'SeMI Technologies',
+    stars: 4.4,
+    icon: <Braces className="h-6 w-6 text-pink-500" />,
+  },
+];
 
 const DatabaseSection = () => {
-  const [activeTab, setActiveTab] = useState<'postgresql' | 'mongodb' | 'vector'>('postgresql');
-  const [isHovering, setIsHovering] = useState(false);
-  const [linesAnimating, setLinesAnimating] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<DatabaseCategory>('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredDatabases, setFilteredDatabases] = useState(databases);
+  const [activeDatabase, setActiveDatabase] = useState<string | null>('postgresql');
 
-  useEffect(() => {
-    // Trigger lines animation whenever tab changes
-    setLinesAnimating(true);
-    const timer = setTimeout(() => setLinesAnimating(false), 1500);
-    return () => clearTimeout(timer);
-  }, [activeTab]);
+  const categories: DatabaseCategory[] = ['All', 'SQL', 'NoSQL', 'Vector', 'Time-Series', 'GraphDB'];
 
-  interface Feature {
-    title: string;
-    description: string;
-    icon: React.ReactNode;
-    badge?: string;
-    color: string;
-  }
-
-  const databases: Record<typeof activeTab, {
-    title: string;
-    description: string;
-    icon: React.ReactNode;
-    features: Feature[];
-    code: string;
-  }> = {
-    postgresql: {
-      title: "PostgreSQL Integration",
-      description: "Connect your pipelines directly to PostgreSQL databases for structured data storage with SQL querying capabilities.",
-      icon: <Database className="h-8 w-8 text-blue-400" />,
-      features: [
-        {
-          title: "Relational Data Models",
-          description: "Store complex relationships between models, pipelines, and execution results with full referential integrity.",
-          icon: <Server className="h-6 w-6" />,
-          color: "from-blue-500/20 to-indigo-600/20",
-        },
-        {
-          title: "Enterprise Security",
-          description: "Row-level security, SSL encryption, and detailed access control for sensitive AI applications.",
-          icon: <Shield className="h-6 w-6" />,
-          badge: "Enterprise",
-          color: "from-indigo-500/20 to-purple-600/20",
-        },
-        {
-          title: "Vector Extensions",
-          description: "Native pgvector extension for storing embeddings alongside structured data.",
-          icon: <Code className="h-6 w-6" />,
-          badge: "New",
-          color: "from-purple-500/20 to-violet-600/20",
-        },
-      ],
-      code: `-- Create tables for Piper's AI pipeline data
-CREATE TABLE pipelines (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(255) NOT NULL,
-  description TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  owner_id UUID REFERENCES users(id),
-  is_public BOOLEAN DEFAULT false
-);
-
-CREATE TABLE models (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(255) NOT NULL,
-  provider VARCHAR(100) NOT NULL,
-  model_type VARCHAR(50) NOT NULL,
-  api_endpoint TEXT,
-  config JSONB,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
-CREATE TABLE pipeline_nodes (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  pipeline_id UUID REFERENCES pipelines(id) ON DELETE CASCADE,
-  model_id UUID REFERENCES models(id),
-  node_type VARCHAR(50) NOT NULL,
-  config JSONB,
-  position_x INTEGER,
-  position_y INTEGER
-);
-
-CREATE TABLE node_connections (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  pipeline_id UUID REFERENCES pipelines(id) ON DELETE CASCADE,
-  source_node_id UUID REFERENCES pipeline_nodes(id) ON DELETE CASCADE,
-  target_node_id UUID REFERENCES pipeline_nodes(id) ON DELETE CASCADE,
-  connection_type VARCHAR(50) DEFAULT 'standard'
-);
-
--- Add vector support for embeddings (requires pgvector extension)
-CREATE EXTENSION IF NOT EXISTS vector;
-
-CREATE TABLE embeddings (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  pipeline_id UUID REFERENCES pipelines(id) ON DELETE CASCADE,
-  node_id UUID REFERENCES pipeline_nodes(id) ON DELETE CASCADE,
-  embedding vector(1536),
-  metadata JSONB,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Create index for similarity search
-CREATE INDEX ON embeddings USING ivfflat (embedding vector_cosine_ops)
-  WITH (lists = 100);`,
-    },
-    mongodb: {
-      title: "MongoDB Integration",
-      description: "Store unstructured and semi-structured data with MongoDB's flexible document-based model.",
-      icon: <Database className="h-8 w-8 text-green-400" />,
-      features: [
-        {
-          title: "Schema-Free Design",
-          description: "Ideal for AI workflows with evolving data structures and varying outputs from different models.",
-          icon: <Box className="h-6 w-6" />,
-          color: "from-green-500/20 to-emerald-600/20",
-        },
-        {
-          title: "Real-Time Pipelines",
-          description: "Use change streams to trigger pipeline execution in response to data updates.",
-          icon: <Activity className="h-6 w-6" />,
-          badge: "Reactive",
-          color: "from-emerald-500/20 to-teal-600/20",
-        },
-        {
-          title: "Distributed Workloads",
-          description: "Sharded collections for processing large-scale data across multiple clusters.",
-          icon: <Cloud className="h-6 w-6" />,
-          color: "from-teal-500/20 to-cyan-600/20",
-        },
-      ],
-      code: `// MongoDB Schema for Piper's AI pipeline data
-db.createCollection("pipelines", {
-  validator: {
-    $jsonSchema: {
-      bsonType: "object",
-      required: ["name", "owner_id"],
-      properties: {
-        name: {
-          bsonType: "string",
-          description: "Pipeline name (required)"
-        },
-        description: {
-          bsonType: "string",
-          description: "Pipeline description"
-        },
-        owner_id: {
-          bsonType: "objectId",
-          description: "ID of the user who owns this pipeline (required)"
-        },
-        is_public: {
-          bsonType: "bool",
-          description: "Whether this pipeline is publicly accessible",
-          default: false
-        },
-        nodes: {
-          bsonType: "array",
-          description: "Array of nodes in the pipeline",
-          items: {
-            bsonType: "object",
-            required: ["node_type"],
-            properties: {
-              node_id: {
-                bsonType: "string",
-                description: "Unique identifier for this node"
-              },
-              node_type: {
-                bsonType: "string",
-                description: "Type of node (input, process, output)"
-              },
-              model_id: {
-                bsonType: "objectId",
-                description: "Reference to the model used by this node"
-              },
-              position: {
-                bsonType: "object",
-                properties: {
-                  x: { bsonType: "int" },
-                  y: { bsonType: "int" }
-                }
-              },
-              config: {
-                bsonType: "object",
-                description: "Configuration for this node"
-              }
-            }
-          }
-        },
-        connections: {
-          bsonType: "array",
-          description: "Connections between nodes",
-          items: {
-            bsonType: "object",
-            required: ["source_id", "target_id"],
-            properties: {
-              source_id: {
-                bsonType: "string",
-                description: "ID of source node"
-              },
-              target_id: {
-                bsonType: "string",
-                description: "ID of target node"
-              },
-              connection_type: {
-                bsonType: "string",
-                default: "standard"
-              }
-            }
-          }
-        },
-        created_at: {
-          bsonType: "date",
-          description: "Creation timestamp"
-        },
-        updated_at: {
-          bsonType: "date",
-          description: "Last update timestamp"
-        }
-      }
+  // Filter databases based on active category and search query
+  const filterDatabases = () => {
+    let result = [...databases];
+    
+    if (activeCategory !== 'All') {
+      result = result.filter(db => db.category === activeCategory);
     }
-  }
-});
-
-// Create vector search index for embeddings
-db.embeddings.createIndex(
-  { embedding: "vectorSearchIndex" },
-  {
-    name: "vector_index",
-    vectorSearchOptions: {
-      dimensions: 1536,
-      similarity: "cosine",
-      numLists: 100
+    
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(db => 
+        db.name.toLowerCase().includes(query) || 
+        db.description.toLowerCase().includes(query) || 
+        db.provider.toLowerCase().includes(query)
+      );
     }
-  }
-);`,
-    },
-    vector: {
-      title: "Vector Database Support",
-      description: "Store and query embedding vectors from language, image, and multimodal AI models with specialized vector databases.",
-      icon: <Database className="h-8 w-8 text-amber-400" />,
-      features: [
-        {
-          title: "Semantic Search & Retrieval",
-          description: "Find similar content, build recommendation systems, and enable RAG applications with vector similarity search.",
-          icon: <Globe className="h-6 w-6" />,
-          color: "from-amber-500/20 to-orange-600/20",
-        },
-        {
-          title: "Hybrid Query Systems",
-          description: "Combine metadata filtering with vector similarity for precise, context-aware results.",
-          icon: <Zap className="h-6 w-6" />,
-          badge: "Fast",
-          color: "from-orange-500/20 to-red-600/20",
-        },
-        {
-          title: "Multi-Modal Embedding",
-          description: "Store text, image, and audio embeddings in a unified database for cross-modal applications.",
-          icon: <Lock className="h-6 w-6" />,
-          badge: "Advanced",
-          color: "from-red-500/20 to-rose-600/20",
-        },
-      ],
-      code: `// Integration with Pinecone Vector Database
-
-import { PineconeClient } from '@pinecone-database/pinecone';
-
-// Initialize Pinecone client
-const pinecone = new PineconeClient();
-await pinecone.init({
-  apiKey: process.env.PINECONE_API_KEY,
-  environment: process.env.PINECONE_ENVIRONMENT
-});
-
-// Create an index for pipeline embeddings
-async function createPipelineIndex() {
-  const indexName = 'piper-embeddings';
-  const existingIndexes = await pinecone.listIndexes();
-  
-  if (!existingIndexes.includes(indexName)) {
-    await pinecone.createIndex({
-      name: indexName,
-      dimension: 1536,  // OpenAI embedding dimension
-      metric: 'cosine'
-    });
-    console.log(\`Created new index: \${indexName}\`);
-  }
-  
-  return pinecone.Index(indexName);
-}
-
-// Store embeddings from pipeline execution
-async function storeEmbedding(pipelineId, nodeId, embedding, metadata) {
-  const index = await createPipelineIndex();
-  
-  const id = \`\${pipelineId}-\${nodeId}-\${Date.now()}\`;
-  
-  await index.upsert({
-    vectors: [{
-      id,
-      values: embedding,
-      metadata: {
-        pipelineId,
-        nodeId,
-        timestamp: new Date().toISOString(),
-        ...metadata
-      }
-    }]
-  });
-  
-  return id;
-}
-
-// Query similar vectors
-async function querySimilar(embedding, filter = {}, topK = 10) {
-  const index = await createPipelineIndex();
-  
-  const results = await index.query({
-    vector: embedding,
-    topK,
-    filter,
-    includeMetadata: true
-  });
-  
-  return results.matches;
-}
-
-// Example usage in a Piper pipeline
-export async function processPipelineNode(node, input) {
-  // Generate embedding from input using OpenAI
-  const embedding = await generateEmbedding(input.text);
-  
-  // Store in vector database
-  const embeddingId = await storeEmbedding(
-    input.pipelineId,
-    node.id,
-    embedding,
-    { sourceText: input.text.substring(0, 100) }
-  );
-  
-  // Find similar content in database
-  const similar = await querySimilar(embedding, {
-    pipelineId: { $ne: input.pipelineId }  // Exclude current pipeline
-  });
-  
-  return {
-    embedding,
-    embeddingId,
-    similarContent: similar
-  };
-}`,
-    },
-  };
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
+    
+    setFilteredDatabases(result);
+    
+    // Set the active database to the first result if the current active database is filtered out
+    if (result.length > 0 && activeDatabase && !result.find(db => db.id === activeDatabase)) {
+      setActiveDatabase(result[0].id);
     }
   };
 
-  const featureVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: { 
-        duration: 0.6,
-        type: "spring",
-        stiffness: 100
-      }
-    }
-  };
+  // Update filtered databases when category or search query changes
+  React.useEffect(() => {
+    filterDatabases();
+  }, [activeCategory, searchQuery]);
 
-  const tabVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: (i: number) => ({
-      opacity: 1,
-      y: 0,
-      transition: {
-        delay: i * 0.1,
-        duration: 0.5
-      }
-    })
+  const getActiveDbCode = () => {
+    const db = databases.find(db => db.id === activeDatabase);
+    return db?.code || '// No connection code example available for this database.';
   };
 
   return (
-    <section id="database" className="py-24 relative overflow-hidden">
+    <section id="databases" className="py-24 relative overflow-hidden">
       <div className="absolute inset-0 bg-grid opacity-[0.02] dark:opacity-[0.05]"></div>
       
-      {/* Interactive background elements */}
+      {/* Futuristic background elements */}
       <div className="absolute inset-0 overflow-hidden">
         <motion.div 
-          className="absolute -right-[10%] top-[10%] w-1/3 h-1/3 rounded-full bg-gradient-to-l from-primary/10 to-transparent blur-3xl"
+          className="absolute top-1/3 left-0 w-full h-1/3 bg-gradient-to-r from-blue-500/5 via-violet-500/5 to-transparent blur-3xl"
           animate={{ 
-            x: [-20, 20, -20], 
-            opacity: [0.1, 0.3, 0.1],
+            opacity: [0.3, 0.7, 0.3], 
+            y: [0, 20, 0] 
           }}
-          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+          transition={{ 
+            duration: 15, 
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
         />
+        
         <motion.div 
-          className="absolute -left-[10%] bottom-[20%] w-1/4 h-1/4 rounded-full bg-gradient-to-r from-secondary/10 to-transparent blur-3xl"
+          className="absolute bottom-0 right-0 w-1/2 h-1/3 bg-gradient-to-tl from-emerald-500/5 via-cyan-500/5 to-transparent blur-3xl"
           animate={{ 
-            x: [20, -20, 20], 
-            opacity: [0.1, 0.25, 0.1],
+            opacity: [0.4, 0.6, 0.4], 
+            x: [0, -20, 0] 
           }}
-          transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+          transition={{ 
+            duration: 18, 
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
         />
       </div>
       
@@ -428,221 +267,154 @@ export async function processPipelineNode(node, input) {
           transition={{ duration: 0.7 }}
           className="text-center mb-16"
         >
-          <motion.h2 
-            className="text-3xl md:text-5xl font-bold mb-4"
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
+          <div className="inline-flex items-center bg-gradient-to-r from-blue-500/20 to-emerald-500/20 px-4 py-1.5 rounded-full mb-4 backdrop-blur-sm border border-blue-500/20">
+            <Database className="w-4 h-4 text-blue-500 mr-2" />
+            <span className="text-sm font-medium bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-emerald-500">
+              Data Integration
+            </span>
+          </div>
+          <h2 className="text-3xl md:text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white to-white/80 dark:from-white dark:to-white/60">
             Powerful Data Management
-          </motion.h2>
-          <motion.p 
-            className="text-muted-foreground max-w-2xl mx-auto"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-          >
-            Connect your AI pipelines with leading database solutions for seamless data flow and persistent storage.
-          </motion.p>
+          </h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Connect your AI pipelines to any database or data source. Seamlessly store, retrieve, and analyze your data.
+          </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-          >
-            <motion.div 
-              className="flex justify-center space-x-2 mb-8 p-1 bg-secondary/50 rounded-full"
-            >
-              {(["postgresql", "mongodb", "vector"] as const).map((tab, index) => (
-                <motion.button 
-                  key={tab}
-                  custom={index}
-                  variants={tabVariants}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true }}
-                  className={`px-4 py-2 rounded-full text-sm transition-all ${
-                    activeTab === tab ? 'bg-primary text-white' : 'hover:bg-secondary'
-                  }`}
-                  onClick={() => setActiveTab(tab)}
-                  onMouseEnter={() => setIsHovering(true)}
-                  onMouseLeave={() => setIsHovering(false)}
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex flex-wrap gap-2">
+              {categories.map(category => (
+                <Button
+                  key={category}
+                  variant={activeCategory === category ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setActiveCategory(category)}
+                  className="rounded-full"
                 >
-                  {tab === 'postgresql' ? 'PostgreSQL' : tab === 'mongodb' ? 'MongoDB' : 'Vector DB'}
-                </motion.button>
+                  {category === 'All' && <Boxes className="h-4 w-4 mr-1" />}
+                  {category === 'SQL' && <Database className="h-4 w-4 mr-1" />}
+                  {category === 'NoSQL' && <Layers className="h-4 w-4 mr-1" />}
+                  {category === 'Vector' && <Hexagon className="h-4 w-4 mr-1" />}
+                  {category === 'Time-Series' && <BarChart className="h-4 w-4 mr-1" />}
+                  {category === 'GraphDB' && <Workflow className="h-4 w-4 mr-1" />}
+                  <span>{category}</span>
+                </Button>
               ))}
-            </motion.div>
+            </div>
+            
+            <div className="relative w-full sm:w-auto mt-4 sm:mt-0">
+              <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search databases..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-9 w-full sm:w-[250px] rounded-full"
+              />
+            </div>
+          </div>
+        </div>
 
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-1 space-y-6">
+            {filteredDatabases.map(database => (
+              <motion.div
+                key={database.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+                whileHover={{ scale: 1.02 }}
+              >
+                <Card 
+                  className={`backdrop-blur-sm border overflow-hidden hover:shadow-md transition-shadow cursor-pointer
+                            ${activeDatabase === database.id 
+                              ? 'bg-gradient-to-br from-background/80 to-background/40 border-primary/50 shadow-[0_0_10px_rgba(59,130,246,0.2)]' 
+                              : 'bg-background/50 dark:bg-background/20'}`}
+                  onClick={() => setActiveDatabase(database.id)}
+                >
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-full bg-background/50 dark:bg-background/20 border border-border/50">
+                          {database.icon}
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-lg flex items-center">
+                            {database.name}
+                            {activeDatabase === database.id && (
+                              <ChevronRight className="h-4 w-4 ml-2 text-primary animate-bounce" />
+                            )}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">{database.provider}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center">
+                        <Star className="h-4 w-4 text-yellow-400 fill-yellow-400 mr-1" />
+                        <span className="text-sm font-medium">{database.stars}</span>
+                      </div>
+                    </div>
+                    
+                    <p className="text-sm mb-4 line-clamp-2">{database.description}</p>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex gap-2">
+                        <Badge variant="outline" className="flex items-center gap-1 text-xs">
+                          {database.category === 'SQL' && <Database className="h-3 w-3" />}
+                          {database.category === 'NoSQL' && <Layers className="h-3 w-3" />}
+                          {database.category === 'Vector' && <Hexagon className="h-3 w-3" />}
+                          {database.category === 'Time-Series' && <BarChart className="h-3 w-3" />}
+                          {database.category === 'GraphDB' && <Workflow className="h-3 w-3" />}
+                          {database.category}
+                        </Badge>
+                        {database.new && (
+                          <Badge className="bg-primary text-xs">New</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+          
+          <div className="lg:col-span-2">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.7, delay: 0.2 }}
-              className="neo-card p-8 shadow-glow border border-primary/5 backdrop-blur-sm bg-background/40 relative"
-              onMouseEnter={() => setIsHovering(true)}
-              onMouseLeave={() => setIsHovering(false)}
             >
-              {/* Decorative tech lines/circles */}
-              <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <motion.div 
-                  className="absolute top-0 left-0 w-full h-full opacity-10"
-                  animate={{ 
-                    opacity: linesAnimating ? [0.1, 0.3, 0.1] : 0.1
-                  }}
-                  transition={{ duration: 1.5 }}
-                >
-                  <svg width="100%" height="100%" viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
-                    <motion.path 
-                      d="M30,50 L100,50 L150,100 L250,100 L300,50 L370,50" 
-                      stroke="currentColor" 
-                      strokeWidth="1" 
-                      fill="none"
-                      strokeDasharray="5,5"
-                      animate={{ 
-                        strokeDashoffset: linesAnimating ? [0, -20] : 0
-                      }}
-                      transition={{ duration: 1.5, ease: "linear" }}
-                    />
-                    <motion.path 
-                      d="M30,150 L100,150 L150,100 L250,100 L300,150 L370,150" 
-                      stroke="currentColor" 
-                      strokeWidth="1" 
-                      fill="none"
-                      strokeDasharray="5,5"
-                      animate={{ 
-                        strokeDashoffset: linesAnimating ? [0, 20] : 0
-                      }}
-                      transition={{ duration: 1.5, ease: "linear" }}
-                    />
-                    <motion.circle 
-                      cx="150" cy="100" r="4" 
-                      fill="currentColor"
-                      animate={{ 
-                        r: linesAnimating ? [4, 8, 4] : 4,
-                        opacity: linesAnimating ? [1, 0.5, 1] : 1
-                      }}
-                      transition={{ duration: 1.5 }}
-                    />
-                    <motion.circle 
-                      cx="250" cy="100" r="4" 
-                      fill="currentColor"
-                      animate={{ 
-                        r: linesAnimating ? [4, 8, 4] : 4,
-                        opacity: linesAnimating ? [1, 0.5, 1] : 1
-                      }}
-                      transition={{ duration: 1.5, delay: 0.2 }}
-                    />
-                  </svg>
-                </motion.div>
-              </div>
-
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeTab}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
-                  variants={containerVariants}
-                >
-                  <div className="flex items-start gap-4 mb-6">
-                    <motion.div
-                      whileHover={{ scale: 1.1, rotate: 5 }}
-                      transition={{ duration: 0.2 }}
-                      className="bg-gradient-to-br from-background to-background/40 p-3 rounded-xl border border-primary/10 shadow-sm"
-                    >
-                      {databases[activeTab].icon}
-                    </motion.div>
-                    <div>
-                      <h3 className="text-xl font-bold mb-2">{databases[activeTab].title}</h3>
-                      <p className="text-muted-foreground">
-                        {databases[activeTab].description}
-                      </p>
+              <Card className="neo-card overflow-hidden backdrop-blur-md bg-gradient-to-br from-background/60 to-background/40 border border-border/50">
+                <div className="p-6">
+                  <h3 className="text-xl font-bold mb-4">Connect with a few lines of code</h3>
+                  <p className="text-muted-foreground mb-6">
+                    Integrate with your database of choice using our simple SDK. Just a few lines of code to start storing and querying your data.
+                  </p>
+                  
+                  <div className="relative">
+                    <pre className="code-block text-xs md:text-sm bg-background/50 dark:bg-background/30 border border-border/50 rounded-lg p-4 overflow-auto max-h-[350px]">
+                      <code className="text-foreground/90">{getActiveDbCode()}</code>
+                    </pre>
+                    
+                    <div className="absolute top-2 right-2 flex gap-1">
+                      <div className="h-3 w-3 rounded-full bg-red-500"></div>
+                      <div className="h-3 w-3 rounded-full bg-yellow-500"></div>
+                      <div className="h-3 w-3 rounded-full bg-green-500"></div>
                     </div>
                   </div>
-
-                  <div className="space-y-6 mt-8">
-                    {databases[activeTab].features.map((feature, idx) => (
-                      <motion.div 
-                        key={idx}
-                        variants={featureVariants}
-                        className="flex items-start gap-4"
-                      >
-                        <motion.div 
-                          className={`p-3 rounded-xl bg-gradient-to-br ${feature.color} backdrop-blur-sm border border-white/10 flex-shrink-0`}
-                          whileHover={{ scale: 1.05, rotate: 3 }}
-                          transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                        >
-                          {feature.icon}
-                        </motion.div>
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="text-lg font-semibold">{feature.title}</h4>
-                            {feature.badge && (
-                              <Badge variant="outline" className="text-xs bg-primary/10">
-                                {feature.badge}
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {feature.description}
-                          </p>
-                        </div>
-                      </motion.div>
-                    ))}
+                  
+                  <div className="mt-6 flex flex-wrap gap-4">
+                    <Badge variant="outline" className="px-3 py-1">One-click setup</Badge>
+                    <Badge variant="outline" className="px-3 py-1">Auto-scaling</Badge>
+                    <Badge variant="outline" className="px-3 py-1">Real-time sync</Badge>
+                    <Badge variant="outline" className="px-3 py-1">Versioning</Badge>
+                    <Badge variant="outline" className="px-3 py-1">Backups</Badge>
                   </div>
-                </motion.div>
-              </AnimatePresence>
-            </motion.div>
-          </motion.div>
-
-          <motion.div 
-            initial={{ opacity: 0, x: 50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7, delay: 0.3 }}
-            className="relative h-[400px]"
-          >
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Card className="w-full h-full bg-background/5 backdrop-blur-sm border border-primary/10 overflow-hidden shadow-xl">
-                <CardContent className="p-0 h-full">
-                  <div className="bg-black/90 h-full text-xs md:text-sm font-mono p-4 text-green-400 overflow-auto relative">
-                    {/* Animated cursor */}
-                    <motion.div 
-                      className="absolute h-4 w-2 bg-green-400"
-                      animate={{ 
-                        opacity: [1, 0, 1],
-                        x: [0, 0],
-                      }}
-                      transition={{ 
-                        opacity: { duration: 0.8, repeat: Infinity },
-                        x: { duration: 0.1 }
-                      }}
-                      style={{ left: "4px", top: "4px" }}
-                    />
-                    
-                    <AnimatePresence mode="wait">
-                      <motion.pre
-                        key={activeTab}
-                        className="pl-3 whitespace-pre-wrap"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.5 }}
-                      >
-                        {databases[activeTab].code}
-                      </motion.pre>
-                    </AnimatePresence>
-                  </div>
-                </CardContent>
+                </div>
               </Card>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
         </div>
 
         <motion.div 
@@ -652,7 +424,6 @@ export async function processPipelineNode(node, input) {
           transition={{ duration: 0.7, delay: 0.4 }}
           className="mt-16 text-center"
         >
-          {/* Fixed the Button by removing whileHover and whileTap framer-motion props */}
           <Button 
             size="lg" 
             className="rounded-full shadow-glow"
