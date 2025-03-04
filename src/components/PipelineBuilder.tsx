@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -234,7 +233,6 @@ const PipelineBuilder = () => {
   const [completedNodes, setCompletedNodes] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
 
-  // Update connection paths whenever nodes change position
   const updateConnectionPaths = useCallback(() => {
     setConnections((prev) =>
       prev.map((conn) => {
@@ -260,7 +258,6 @@ const PipelineBuilder = () => {
         const toX = toNode.x;
         const toY = toNode.y + 40 + (toNode.collapsed ? 0 : toIndex * 30);
 
-        // Calculate control points for the bezier curve
         const dx = Math.abs(toX - fromX);
         const controlX1 = fromX + Math.min(dx * 0.5, 100);
         const controlX2 = toX - Math.min(dx * 0.5, 100);
@@ -277,7 +274,7 @@ const PipelineBuilder = () => {
   }, [updateConnectionPaths]);
 
   const handleMouseDown = (e: React.MouseEvent, nodeId: string) => {
-    if (e.button !== 0) return; // Only left mouse button
+    if (e.button !== 0) return;
 
     const node = nodes.find((n) => n.id === nodeId);
     if (!node) return;
@@ -324,7 +321,6 @@ const PipelineBuilder = () => {
 
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
     if (e.button === 1 || e.button === 2 || (e.button === 0 && e.altKey)) {
-      // Middle mouse button or right mouse button or Alt+Left
       e.preventDefault();
       setIsPanning(true);
       setPanStart({
@@ -340,14 +336,12 @@ const PipelineBuilder = () => {
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
     const newScale = Math.min(Math.max(scale * delta, 0.1), 2);
 
-    // Get mouse position relative to container
     const containerRect = containerRef.current?.getBoundingClientRect();
     if (!containerRect) return;
 
     const mouseX = (e.clientX - containerRect.left) / scale;
     const mouseY = (e.clientY - containerRect.top) / scale;
 
-    // Calculate new pan position to zoom toward mouse position
     const newPanX = pan.x - (mouseX - pan.x) * (delta - 1);
     const newPanY = pan.y - (mouseY - pan.y) * (delta - 1);
 
@@ -455,7 +449,7 @@ const PipelineBuilder = () => {
   };
 
   return (
-    <section id="pipeline" className="relative py-24 overflow-hidden">
+    <section id="pipeline" className="relative py-16 overflow-hidden">
       <div className="absolute inset-0 bg-grid opacity-[0.02] dark:opacity-[0.05]"></div>
       <div className="container px-6 mx-auto">
         <motion.div 
@@ -463,29 +457,25 @@ const PipelineBuilder = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7 }}
-          className="text-center mb-16"
+          className="text-center mb-10"
         >
-          <h2 className="text-3xl md:text-5xl font-bold mb-4">Visualize Your Pipeline</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Visual Pipeline Builder</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Drag and drop models to build your custom AI workflow. Connect components to create powerful processing pipelines.
+            Connect models to create powerful processing pipelines in minutes, not days.
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, delay: 0.2 }}
-            className="h-[600px] neo-card relative shadow-glow bg-gradient-to-br from-background to-background/40 backdrop-blur-sm overflow-hidden lg:col-span-4"
+            className="h-[450px] neo-card relative shadow-glow bg-gradient-to-br from-background to-background/40 backdrop-blur-sm overflow-hidden lg:col-span-3"
           >
-            <div className="p-4 border-b flex justify-between items-center">
-              <h3 className="font-medium">Pipeline Builder</h3>
+            <div className="p-3 border-b flex justify-between items-center">
+              <h3 className="font-medium">Pipeline Editor</h3>
               <div className="flex gap-2">
-                <Button size="sm" variant="outline">
-                  <Save className="h-4 w-4 mr-1" />
-                  Save
-                </Button>
                 <Button 
                   size="sm"
                   onClick={runPipeline}
@@ -508,14 +498,13 @@ const PipelineBuilder = () => {
 
             <div
               ref={containerRef}
-              className="relative h-[calc(100%-57px)] overflow-hidden bg-black/90 rounded-b-lg"
+              className="relative h-[calc(100%-49px)] overflow-hidden bg-black/90 rounded-b-lg"
               onMouseDown={handleCanvasMouseDown}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
               onWheel={handleWheel}
             >
-              {/* Grid background */}
               <div
                 className="absolute inset-0"
                 style={{
@@ -525,7 +514,6 @@ const PipelineBuilder = () => {
                 }}
               />
 
-              {/* Transformation group */}
               <div
                 className="absolute inset-0 transform-gpu"
                 style={{
@@ -533,7 +521,6 @@ const PipelineBuilder = () => {
                   transformOrigin: "0 0",
                 }}
               >
-                {/* Connections */}
                 <svg className="absolute inset-0 w-full h-full pointer-events-none">
                   {connections.map((conn) => {
                     const isActive = activeNodeId === conn.to.nodeId && completedNodes.includes(conn.from.nodeId);
@@ -591,7 +578,15 @@ const PipelineBuilder = () => {
                   </defs>
                 </svg>
 
-                {/* Nodes */}
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-primary"
+                    initial={{ width: "0%" }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 0.3 }}
+                  ></motion.div>
+                </div>
+
                 {nodes.map((node) => {
                   const isActive = activeNodeId === node.id;
                   const isCompleted = completedNodes.includes(node.id);
@@ -629,7 +624,6 @@ const PipelineBuilder = () => {
 
                       {!node.collapsed && (
                         <div className="p-2 space-y-2">
-                          {/* Inputs */}
                           {node.inputs.map((input, idx) => (
                             <div key={input.id} className="flex items-center gap-2 text-xs">
                               <div
@@ -646,7 +640,6 @@ const PipelineBuilder = () => {
                             </div>
                           ))}
 
-                          {/* Outputs */}
                           {node.outputs.map((output, idx) => (
                             <div key={output.id} className="flex items-center justify-between gap-2 text-xs">
                               <div className="flex-1" />
@@ -686,7 +679,6 @@ const PipelineBuilder = () => {
                 })}
               </div>
 
-              {/* Controls overlay */}
               <div className="absolute bottom-4 right-4 flex gap-2">
                 <Button
                   size="sm"
@@ -724,68 +716,12 @@ const PipelineBuilder = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, delay: 0.4 }}
-            className="flex flex-col gap-4 lg:col-span-1"
+            className="lg:col-span-1"
           >
-            <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-              <div className="p-4">
-                <h3 className="font-medium mb-3">Add Models</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" size="sm" className="flex flex-col h-auto py-3 gap-2">
-                    <Grid className="h-5 w-5 text-emerald-500" />
-                    <span className="text-xs">Grid</span>
-                  </Button>
-                  <Button variant="outline" size="sm" className="flex flex-col h-auto py-3 gap-2">
-                    <Box className="h-5 w-5 text-blue-500" />
-                    <span className="text-xs">Position</span>
-                  </Button>
-                  <Button variant="outline" size="sm" className="flex flex-col h-auto py-3 gap-2">
-                    <Layers className="h-5 w-5 text-emerald-500" />
-                    <span className="text-xs">Instance</span>
-                  </Button>
-                  <Button variant="outline" size="sm" className="flex flex-col h-auto py-3 gap-2">
-                    <Workflow className="h-5 w-5 text-violet-500" />
-                    <span className="text-xs">Geometry</span>
-                  </Button>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-              <div className="p-4">
-                <h3 className="font-medium mb-3">Instructions</h3>
-                <ul className="text-sm text-foreground/70 space-y-2">
-                  <li className="flex items-start gap-2">
-                    <span className="bg-primary/20 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs mt-0.5">
-                      1
-                    </span>
-                    <span>Drag models to position</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="bg-primary/20 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs mt-0.5">
-                      2
-                    </span>
-                    <span>Connect node inputs/outputs</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="bg-primary/20 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs mt-0.5">
-                      3
-                    </span>
-                    <span>Configure node properties</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="bg-primary/20 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs mt-0.5">
-                      4
-                    </span>
-                    <span>Run your pipeline</span>
-                  </li>
-                </ul>
-              </div>
-            </Card>
-
-            <Card className="border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden">
-              <div className="p-4">
+            <Card className="border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden h-full">
+              <div className="p-4 h-full flex flex-col">
                 <h3 className="font-medium mb-3">Code Output</h3>
-                <div className="max-h-[180px] overflow-auto custom-scrollbar bg-black/80 p-3 rounded-md">
+                <div className="flex-1 overflow-auto custom-scrollbar bg-black/80 p-3 rounded-md">
                   <pre className="text-xs text-green-400 font-mono">
 {`// Generated Pipeline Code
 import { createPipeline } from '@piper/core';
@@ -808,18 +744,6 @@ pipeline.run(async (data) => {
             </Card>
           </motion.div>
         </div>
-
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7, delay: 0.5 }}
-          className="mt-10 text-center"
-        >
-          <Button size="lg" className="rounded-full px-8 shadow-glow">
-            Build Your Pipeline <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </motion.div>
       </div>
     </section>
   );
