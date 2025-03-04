@@ -498,7 +498,7 @@ export default function PipelineBuilder() {
             <div className="w-8 h-8 rounded-full bg-gradient-to-r from-violet-500 to-cyan-500 flex items-center justify-center">
               <Sparkles size={16} className="text-white" />
             </div>
-            <h1 className="text-xl font-bold">AI Pipeline Builder</h1>
+            <h1 className="text-xl font-bold">Build your Pipeline</h1>
           </div>
 
           <div className="flex items-center gap-4">

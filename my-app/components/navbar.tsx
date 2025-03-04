@@ -29,9 +29,9 @@ export default function Navbar() {
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-2">
               <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold">C</span>
+                <span className="text-primary-foreground font-bold">P</span>
               </div>
-              <span className="font-bold text-xl">Chain AI</span>
+              <span className="font-bold text-xl">Piper</span>
             </Link>
           </div>
 
