@@ -243,3 +243,71 @@
   filter: blur(20px);
   opacity: 0.8;
 }
+
+/* Enhanced Pipeline Builder Styles */
+.pipeline-node {
+  transition: transform 0.1s ease-out, box-shadow 0.3s ease;
+}
+
+.pipeline-node:hover {
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+}
+
+.pipeline-connection {
+  animation: flowLine 40s linear infinite;
+}
+
+@keyframes flowLine {
+  0% {
+    stroke-dashoffset: 500;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* New futuristic styles */
+.cybertext {
+  text-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+}
+
+.cyber-border {
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.2), inset 0 0 10px rgba(59, 130, 246, 0.2);
+}
+
+.cyber-glow {
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.5));
+}
+
+.terminal-text {
+  color: #33FF33;
+  text-shadow: 0 0 5px rgba(51, 255, 51, 0.3);
+  font-family: monospace;
+}
+
+.cyber-bg {
+  background: linear-gradient(110deg, rgba(13, 16, 45, 0.7) 0%, rgba(37, 93, 217, 0.3) 50%, rgba(13, 16, 45, 0.7) 100%);
+  backdrop-filter: blur(10px);
+}
+
+.cyber-grid {
+  background-image: 
+    linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.offset-path {
+  offset-path: path("M0,0 C100,0 100,100 200,100");
+  animation: move 2s linear infinite;
+}
+
+@keyframes move {
+  0% {
+    offset-distance: 0%;
+  }
+  100% {
+    offset-distance: 100%;
+  }
+}

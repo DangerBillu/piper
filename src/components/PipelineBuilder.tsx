@@ -1,227 +1,417 @@
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
   ArrowRight, Play, Circle, CheckCircle2, Zap, 
   Box, ChevronDown, AlignJustify, Settings, 
   ChevronUp, Terminal, Bot, Image as ImageIcon, FileText,
-  MoveHorizontal
+  MoveHorizontal, Save, Grid, Layers, Workflow, Cpu
 } from 'lucide-react';
 import CodeViewer from '@/components/CodeViewer';
-import { motion, AnimatePresence, useDragControls } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 
-interface NodeData {
-  id: number;
-  type: 'input' | 'process' | 'output';
+type NodeType = {
+  id: string;
+  type: string;
   title: string;
-  subtitle?: string;
-  expanded?: boolean;
-  position: { x: number; y: number };
-  config?: {
-    [key: string]: string | number | boolean;
-  }
+  x: number;
+  y: number;
+  collapsed: boolean;
+  inputs: NodeInput[];
+  outputs: NodeOutput[];
+  color: string;
 }
 
-interface EdgeData {
+type NodeInput = {
   id: string;
-  source: number;
-  target: number;
-  animated?: boolean;
-  color?: string;
+  name: string;
+  type: "geometry" | "attribute" | "position" | "value" | "selection" | "mesh" | "points" | "instance";
+  value?: string | number;
+  connected?: boolean;
+}
+
+type NodeOutput = {
+  id: string;
+  name: string;
+  type: "geometry" | "attribute" | "position" | "value" | "selection" | "mesh" | "points" | "instance";
+  connected?: boolean;
+}
+
+type ConnectionType = {
+  id: string;
+  from: { nodeId: string; outputId: string };
+  to: { nodeId: string; inputId: string };
+  path: string;
+  color: string;
 }
 
 const PipelineBuilder = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   
-  const [nodes, setNodes] = useState<NodeData[]>([
-    { 
-      id: 1, 
-      type: 'input', 
-      title: 'Text Input', 
-      subtitle: 'User prompt',
-      expanded: false,
-      position: { x: 30, y: 180 },
-      config: {
-        'mode': 'streaming',
-        'max_tokens': 1000
-      }
+  const [nodes, setNodes] = useState<NodeType[]>([
+    {
+      id: "node1",
+      type: "grid",
+      title: "Grid",
+      x: 50,
+      y: 50,
+      collapsed: false,
+      color: "#4ade80",
+      inputs: [
+        { id: "n1-i1", name: "Size X", type: "value", value: "1 m" },
+        { id: "n1-i2", name: "Size Y", type: "value", value: "1 m" },
+        { id: "n1-i3", name: "Vertices X", type: "value", value: "10" },
+        { id: "n1-i4", name: "Vertices Y", type: "value", value: "10" },
+      ],
+      outputs: [
+        { id: "n1-o1", name: "Mesh", type: "mesh", connected: true },
+        { id: "n1-o2", name: "Geometry", type: "geometry", connected: true },
+        { id: "n1-o3", name: "Position", type: "position", connected: true },
+      ],
     },
-    { 
-      id: 2, 
-      type: 'process', 
-      title: 'Attribute Capture', 
-      subtitle: 'Extract key details',
-      expanded: false,
-      position: { x: 250, y: 120 },
-      config: {
-        'attribute': 'geometry',
-        'vector': 'point',
-        'dimension': 3
-      }
+    {
+      id: "node2",
+      type: "capture",
+      title: "Capture Attribute",
+      x: 300,
+      y: 80,
+      collapsed: false,
+      color: "#3b82f6",
+      inputs: [
+        { id: "n2-i1", name: "Geometry", type: "geometry", connected: true },
+        { id: "n2-i2", name: "Attribute", type: "attribute", value: "Vector" },
+        { id: "n2-i3", name: "Value", type: "value", value: "Point" },
+      ],
+      outputs: [
+        { id: "n2-o1", name: "Geometry", type: "geometry", connected: true },
+        { id: "n2-o2", name: "Value", type: "value", connected: true },
+      ],
     },
-    { 
-      id: 3, 
-      type: 'process', 
-      title: 'Position Setting', 
-      subtitle: 'Coordinate mapping',
-      expanded: false,
-      position: { x: 450, y: 70 },
-      config: {
-        'x': 1,
-        'y': 0,
-        'z': 0
-      }
+    {
+      id: "node3",
+      type: "position",
+      title: "Set Position",
+      x: 550,
+      y: 50,
+      collapsed: false,
+      color: "#4ade80",
+      inputs: [
+        { id: "n3-i1", name: "Geometry", type: "geometry", connected: true },
+        { id: "n3-i2", name: "Selection", type: "selection" },
+        { id: "n3-i3", name: "Position", type: "position", connected: true },
+        { id: "n3-i4", name: "Offset X", type: "value", value: "1 m" },
+        { id: "n3-i5", name: "Offset Y", type: "value", value: "0 m" },
+        { id: "n3-i6", name: "Offset Z", type: "value", value: "0 m" },
+      ],
+      outputs: [{ id: "n3-o1", name: "Geometry", type: "geometry", connected: true }],
     },
-    { 
-      id: 4, 
-      type: 'process', 
-      title: 'Instance', 
-      subtitle: 'Points configuration',
-      expanded: false,
-      position: { x: 600, y: 150 },
-      config: {
-        'count': 120,
-        'selection': 'all',
-        'rotation': '0°'
-      }
+    {
+      id: "node4",
+      type: "instance",
+      title: "Instance on Points",
+      x: 750,
+      y: 150,
+      collapsed: false,
+      color: "#4ade80",
+      inputs: [
+        { id: "n4-i1", name: "Points", type: "points", connected: true },
+        { id: "n4-i2", name: "Instance", type: "instance" },
+        { id: "n4-i3", name: "Selection", type: "selection" },
+        { id: "n4-i4", name: "Pick Instance", type: "value", value: "0" },
+        { id: "n4-i5", name: "Instance Index", type: "value" },
+        { id: "n4-i6", name: "Rotation X", type: "value", value: "0°" },
+        { id: "n4-i7", name: "Rotation Y", type: "value", value: "0°" },
+        { id: "n4-i8", name: "Rotation Z", type: "value", value: "0°" },
+        { id: "n4-i9", name: "Scale X", type: "value", value: "0.020" },
+        { id: "n4-i10", name: "Scale Y", type: "value", value: "0.020" },
+        { id: "n4-i11", name: "Scale Z", type: "value", value: "0.020" },
+      ],
+      outputs: [{ id: "n4-o1", name: "Instances", type: "instance", connected: true }],
     },
-    { 
-      id: 5, 
-      type: 'process', 
-      title: 'Geometry Join', 
-      subtitle: 'Merge geometries',
-      expanded: false,
-      position: { x: 750, y: 220 },
-      config: {
-        'mode': 'union',
-        'normalize': true
-      }
+    {
+      id: "node5",
+      type: "cone",
+      title: "Cone",
+      x: 550,
+      y: 350,
+      collapsed: false,
+      color: "#4ade80",
+      inputs: [
+        { id: "n5-i1", name: "Mesh", type: "mesh", connected: true },
+        { id: "n5-i2", name: "Top", type: "value" },
+        { id: "n5-i3", name: "Bottom", type: "value" },
+        { id: "n5-i4", name: "Side", type: "value" },
+        { id: "n5-i5", name: "Fill Type", type: "value", value: "N-Gon" },
+        { id: "n5-i6", name: "Vertices", type: "value", value: "32" },
+        { id: "n5-i7", name: "Side Segment", type: "value", value: "1" },
+        { id: "n5-i8", name: "Fill Segments", type: "value", value: "1" },
+        { id: "n5-i9", name: "Radius Top", type: "value", value: "0 m" },
+        { id: "n5-i10", name: "Radius Bottom", type: "value", value: "1 m" },
+        { id: "n5-i11", name: "Depth", type: "value", value: "2 m" },
+      ],
+      outputs: [{ id: "n5-o1", name: "Mesh", type: "mesh", connected: true }],
     },
-    { 
-      id: 6, 
-      type: 'output', 
-      title: 'Output', 
-      subtitle: 'Final result',
-      expanded: false,
-      position: { x: 900, y: 140 },
-      config: {
-        'format': 'glb',
-        'compress': true
-      }
-    }
+    {
+      id: "node6",
+      type: "join",
+      title: "Join Geometry",
+      x: 1000,
+      y: 220,
+      collapsed: false,
+      color: "#4ade80",
+      inputs: [{ id: "n6-i1", name: "Geometry", type: "geometry", connected: true }],
+      outputs: [{ id: "n6-o1", name: "Geometry", type: "geometry", connected: true }],
+    },
+    {
+      id: "node7",
+      type: "output",
+      title: "Group Output",
+      x: 1200,
+      y: 220,
+      collapsed: false,
+      color: "#6b7280",
+      inputs: [{ id: "n7-i1", name: "Geometry", type: "geometry", connected: true }],
+      outputs: [],
+    },
   ]);
 
-  const [edges, setEdges] = useState<EdgeData[]>([
-    { id: 'e1-2', source: 1, target: 2, color: 'rgba(66, 153, 225, 0.7)' },
-    { id: 'e2-3', source: 2, target: 3, color: 'rgba(66, 153, 225, 0.7)' },
-    { id: 'e3-4', source: 3, target: 4, color: 'rgba(39, 174, 96, 0.7)' },
-    { id: 'e2-4', source: 2, target: 4, color: 'rgba(66, 153, 225, 0.7)' },
-    { id: 'e4-5', source: 4, target: 5, color: 'rgba(39, 174, 96, 0.7)' },
-    { id: 'e5-6', source: 5, target: 6, color: 'rgba(39, 174, 96, 0.7)' },
+  const [connections, setConnections] = useState<ConnectionType[]>([
+    {
+      id: "conn1",
+      from: { nodeId: "node1", outputId: "n1-o2" },
+      to: { nodeId: "node2", inputId: "n2-i1" },
+      path: "",
+      color: "#4ade80",
+    },
+    {
+      id: "conn2",
+      from: { nodeId: "node2", outputId: "n2-o1" },
+      to: { nodeId: "node3", inputId: "n3-i1" },
+      path: "",
+      color: "#4ade80",
+    },
+    {
+      id: "conn3",
+      from: { nodeId: "node3", outputId: "n3-o1" },
+      to: { nodeId: "node4", inputId: "n4-i1" },
+      path: "",
+      color: "#4ade80",
+    },
+    {
+      id: "conn4",
+      from: { nodeId: "node1", outputId: "n1-o1" },
+      to: { nodeId: "node5", inputId: "n5-i1" },
+      path: "",
+      color: "#4ade80",
+    },
+    {
+      id: "conn5",
+      from: { nodeId: "node4", outputId: "n4-o1" },
+      to: { nodeId: "node6", inputId: "n6-i1" },
+      path: "",
+      color: "#4ade80",
+    },
+    {
+      id: "conn6",
+      from: { nodeId: "node6", outputId: "n6-o1" },
+      to: { nodeId: "node7", inputId: "n7-i1" },
+      path: "",
+      color: "#4ade80",
+    },
   ]);
 
+  const [draggingNode, setDraggingNode] = useState<string | null>(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [scale, setScale] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [isRunning, setIsRunning] = useState(false);
-  const [activeNodeId, setActiveNodeId] = useState<number | null>(null);
-  const [completedNodes, setCompletedNodes] = useState<number[]>([]);
+  const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
+  const [completedNodes, setCompletedNodes] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
-  const [draggingNodeId, setDraggingNodeId] = useState<number | null>(null);
-  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
 
-  // Get container dimensions
+  // Update connection paths whenever nodes change position
+  const updateConnectionPaths = useCallback(() => {
+    setConnections((prev) =>
+      prev.map((conn) => {
+        const fromNode = nodes.find((n) => n.id === conn.from.nodeId);
+        const toNode = nodes.find((n) => n.id === conn.to.nodeId);
+
+        if (!fromNode || !toNode) return conn;
+
+        const fromOutput = fromNode.outputs.find((o) => o.id === conn.from.outputId);
+        const toInput = toNode.inputs.find((i) => i.id === conn.to.inputId);
+
+        if (!fromOutput || !toInput) return conn;
+
+        const fromIndex = fromNode.outputs.indexOf(fromOutput);
+        const toIndex = toNode.inputs.indexOf(toInput);
+
+        const fromNodeHeight = fromNode.collapsed ? 40 : 40 + (fromNode.inputs.length + fromNode.outputs.length) * 30;
+        const toNodeHeight = toNode.collapsed ? 40 : 40 + (toNode.inputs.length + toNode.outputs.length) * 30;
+
+        const fromX = fromNode.x + 250;
+        const fromY = fromNode.y + 40 + (fromNode.collapsed ? 0 : (fromNode.inputs.length + fromIndex) * 30);
+
+        const toX = toNode.x;
+        const toY = toNode.y + 40 + (toNode.collapsed ? 0 : toIndex * 30);
+
+        // Calculate control points for the bezier curve
+        const dx = Math.abs(toX - fromX);
+        const controlX1 = fromX + Math.min(dx * 0.5, 100);
+        const controlX2 = toX - Math.min(dx * 0.5, 100);
+
+        const path = `M${fromX},${fromY} C${controlX1},${fromY} ${controlX2},${toY} ${toX},${toY}`;
+
+        return { ...conn, path };
+      })
+    );
+  }, [nodes]);
+
   useEffect(() => {
-    if (containerRef.current) {
-      const updateSize = () => {
-        if (containerRef.current) {
-          const rect = containerRef.current.getBoundingClientRect();
-          setContainerSize({ width: rect.width, height: rect.height });
-        }
-      };
-      
-      updateSize();
-      window.addEventListener('resize', updateSize);
-      
-      return () => {
-        window.removeEventListener('resize', updateSize);
-      };
+    updateConnectionPaths();
+  }, [updateConnectionPaths]);
+
+  const handleMouseDown = (e: React.MouseEvent, nodeId: string) => {
+    if (e.button !== 0) return; // Only left mouse button
+
+    const node = nodes.find((n) => n.id === nodeId);
+    if (!node) return;
+
+    setDraggingNode(nodeId);
+    setDragOffset({
+      x: e.clientX - node.x,
+      y: e.clientY - node.y,
+    });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isPanning) {
+      const dx = (e.clientX - panStart.x) / scale;
+      const dy = (e.clientY - panStart.y) / scale;
+
+      setPan((prev) => ({
+        x: prev.x + dx,
+        y: prev.y + dy,
+      }));
+
+      setPanStart({
+        x: e.clientX,
+        y: e.clientY,
+      });
+      return;
     }
-  }, []);
 
-  // Position nodes to fit within container if they're outside
-  useEffect(() => {
-    if (containerSize.width > 0 && containerSize.height > 0) {
-      setNodes(prevNodes => 
-        prevNodes.map(node => {
-          const nodeWidth = node.expanded ? 220 : 160;
-          const nodeHeight = 60;
-          
-          // Ensure node is within container bounds
-          const x = Math.max(0, Math.min(node.position.x, containerSize.width - nodeWidth));
-          const y = Math.max(0, Math.min(node.position.y, containerSize.height - nodeHeight));
-          
-          return {
-            ...node,
-            position: { x, y }
-          };
-        })
-      );
+    if (!draggingNode) return;
+
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    if (!containerRect) return;
+
+    const x = (e.clientX - containerRect.left) / scale - dragOffset.x - pan.x;
+    const y = (e.clientY - containerRect.top) / scale - dragOffset.y - pan.y;
+
+    setNodes(nodes.map((node) => (node.id === draggingNode ? { ...node, x, y } : node)));
+  };
+
+  const handleMouseUp = () => {
+    setDraggingNode(null);
+    setIsPanning(false);
+  };
+
+  const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    if (e.button === 1 || e.button === 2 || (e.button === 0 && e.altKey)) {
+      // Middle mouse button or right mouse button or Alt+Left
+      e.preventDefault();
+      setIsPanning(true);
+      setPanStart({
+        x: e.clientX,
+        y: e.clientY,
+      });
     }
-  }, [containerSize]);
-
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-    };
-  }, []);
-
-  const toggleNodeExpand = (nodeId: number) => {
-    setNodes(nodes.map(node => 
-      node.id === nodeId 
-        ? { ...node, expanded: !node.expanded } 
-        : node
-    ));
   };
 
-  const updateNodePosition = (nodeId: number, newPosition: { x: number; y: number }) => {
-    if (containerSize.width <= 0 || containerSize.height <= 0) return;
-    
-    const nodeWidth = nodes.find(n => n.id === nodeId)?.expanded ? 220 : 160;
-    const nodeHeight = 60;
-    
-    // Constrain to container bounds
-    const x = Math.max(0, Math.min(newPosition.x, containerSize.width - nodeWidth));
-    const y = Math.max(0, Math.min(newPosition.y, containerSize.height - nodeHeight));
-    
-    setNodes(nodes.map(node => 
-      node.id === nodeId 
-        ? { ...node, position: { x, y } } 
-        : node
-    ));
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    const newScale = Math.min(Math.max(scale * delta, 0.1), 2);
+
+    // Get mouse position relative to container
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    if (!containerRect) return;
+
+    const mouseX = (e.clientX - containerRect.left) / scale;
+    const mouseY = (e.clientY - containerRect.top) / scale;
+
+    // Calculate new pan position to zoom toward mouse position
+    const newPanX = pan.x - (mouseX - pan.x) * (delta - 1);
+    const newPanY = pan.y - (mouseY - pan.y) * (delta - 1);
+
+    setScale(newScale);
+    setPan({ x: newPanX, y: newPanY });
   };
 
-  const handleDragStart = (nodeId: number) => {
-    setDraggingNodeId(nodeId);
+  const toggleNodeCollapse = (nodeId: string) => {
+    setNodes(nodes.map((node) => (node.id === nodeId ? { ...node, collapsed: !node.collapsed } : node)));
   };
 
-  const handleDragEnd = () => {
-    setDraggingNodeId(null);
+  const getNodeIcon = (type: string) => {
+    switch (type) {
+      case "grid":
+        return <Grid className="h-4 w-4" />;
+      case "capture":
+        return <FileText className="h-4 w-4" />;
+      case "position":
+        return <Box className="h-4 w-4" />;
+      case "instance":
+        return <Layers className="h-4 w-4" />;
+      case "cone":
+        return <Workflow className="h-4 w-4" />;
+      case "join":
+        return <Cpu className="h-4 w-4" />;
+      case "output":
+        return <Terminal className="h-4 w-4" />;
+      default:
+        return <Box className="h-4 w-4" />;
+    }
+  };
+
+  const getInputColor = (type: string) => {
+    switch (type) {
+      case "geometry":
+        return "#4ade80";
+      case "mesh":
+        return "#4ade80";
+      case "points":
+        return "#4ade80";
+      case "instance":
+        return "#4ade80";
+      case "position":
+        return "#3b82f6";
+      case "selection":
+        return "#a855f7";
+      case "attribute":
+        return "#3b82f6";
+      case "value":
+        return "#6b7280";
+      default:
+        return "#6b7280";
+    }
   };
 
   const runPipeline = () => {
     setIsRunning(true);
-    setActiveNodeId(1);
+    setActiveNodeId("node1");
     setCompletedNodes([]);
     setProgress(0);
     
-    const executeNode = (nodeId: number, delay: number) => {
+    const executeNode = (nodeId: string, delay: number) => {
       return new Promise<void>((resolve) => {
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        
-        timeoutRef.current = setTimeout(() => {
+        setTimeout(() => {
           setActiveNodeId(nodeId);
           
           let startTime = Date.now();
@@ -233,25 +423,26 @@ const PipelineBuilder = () => {
             setProgress(newProgress);
             
             if (newProgress < 100) {
-              animationFrameRef.current = requestAnimationFrame(updateProgress);
+              requestAnimationFrame(updateProgress);
             } else {
               setCompletedNodes((prev) => [...prev, nodeId]);
               resolve();
             }
           };
           
-          animationFrameRef.current = requestAnimationFrame(updateProgress);
+          requestAnimationFrame(updateProgress);
         }, delay);
       });
     };
     
     const simulatePath = async () => {
-      await executeNode(1, 0);
-      await executeNode(2, 700);
-      await executeNode(3, 700);
-      await executeNode(4, 900);
-      await executeNode(5, 800);
-      await executeNode(6, 700);
+      await executeNode("node1", 0);
+      await executeNode("node2", 700);
+      await executeNode("node3", 700);
+      await executeNode("node4", 900);
+      await executeNode("node5", 800);
+      await executeNode("node6", 700);
+      await executeNode("node7", 700);
       
       setActiveNodeId(null);
       setTimeout(() => {
@@ -263,60 +454,8 @@ const PipelineBuilder = () => {
     simulatePath();
   };
 
-  const getNodeIcon = (type: string) => {
-    switch (type) {
-      case 'input':
-        return <FileText className="h-4 w-4" />;
-      case 'process':
-        return <Settings className="h-4 w-4" />;
-      case 'output':
-        return <Terminal className="h-4 w-4" />;
-      default:
-        return <Box className="h-4 w-4" />;
-    }
-  };
-
-  const nodeColorClass = (type: string) => {
-    switch (type) {
-      case 'input':
-        return 'border-blue-500/30 bg-blue-500/5';
-      case 'process':
-        return 'border-violet-500/30 bg-violet-500/5';
-      case 'output':
-        return 'border-emerald-500/30 bg-emerald-500/5';
-      default:
-        return 'border-gray-500/30 bg-gray-500/5';
-    }
-  };
-
-  const nodeHeaderColor = (type: string) => {
-    switch (type) {
-      case 'input':
-        return 'bg-blue-500/20 text-blue-700 dark:text-blue-300';
-      case 'process':
-        return 'bg-violet-500/20 text-violet-700 dark:text-violet-300';
-      case 'output':
-        return 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300';
-      default:
-        return 'bg-gray-500/20 text-gray-700 dark:text-gray-300';
-    }
-  };
-
-  const nodeHandleColor = (type: string) => {
-    switch (type) {
-      case 'input':
-        return 'bg-blue-500';
-      case 'process':
-        return 'bg-violet-500';
-      case 'output':
-        return 'bg-emerald-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
-
   return (
-    <section id="pipeline" className="py-24 relative overflow-hidden">
+    <section id="pipeline" className="relative py-24 overflow-hidden">
       <div className="absolute inset-0 bg-grid opacity-[0.02] dark:opacity-[0.05]"></div>
       <div className="container px-6 mx-auto">
         <motion.div 
@@ -332,254 +471,252 @@ const PipelineBuilder = () => {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, delay: 0.2 }}
-            className="h-[500px] neo-card p-6 relative shadow-glow bg-gradient-to-br from-background to-background/40 backdrop-blur-sm overflow-hidden"
-            ref={containerRef}
+            className="h-[600px] neo-card relative shadow-glow bg-gradient-to-br from-background to-background/40 backdrop-blur-sm overflow-hidden lg:col-span-4"
           >
-            <div className="absolute inset-0" style={{ 
-              backgroundImage: 'radial-gradient(circle, rgba(125,125,125,0.1) 1px, transparent 1px)', 
-              backgroundSize: '20px 20px',
-              opacity: 0.3
-            }}></div>
-            
-            <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-              <svg className="absolute inset-0 pointer-events-none" style={{ width: '100%', height: '100%' }}>
-                <defs>
-                  <marker
-                    id="arrow"
-                    viewBox="0 0 10 10"
-                    refX="5"
-                    refY="5"
-                    markerWidth="4"
-                    markerHeight="4"
-                    orient="auto-start-reverse"
-                  >
-                    <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" />
-                  </marker>
-                </defs>
-                {edges.map((edge) => {
-                  const source = nodes.find(n => n.id === edge.source);
-                  const target = nodes.find(n => n.id === edge.target);
+            <div className="p-4 border-b flex justify-between items-center">
+              <h3 className="font-medium">Pipeline Builder</h3>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline">
+                  <Save className="h-4 w-4 mr-1" />
+                  Save
+                </Button>
+                <Button 
+                  size="sm"
+                  onClick={runPipeline}
+                  disabled={isRunning}
+                >
+                  {isRunning ? (
+                    <>
+                      <Circle className="h-4 w-4 mr-1 animate-spin" />
+                      Running...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4 mr-1" />
+                      Run
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <div
+              ref={containerRef}
+              className="relative h-[calc(100%-57px)] overflow-hidden bg-black/90 rounded-b-lg"
+              onMouseDown={handleCanvasMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onWheel={handleWheel}
+            >
+              {/* Grid background */}
+              <div
+                className="absolute inset-0"
+                style={{
+                  backgroundImage: `radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px)`,
+                  backgroundSize: `${20 * scale}px ${20 * scale}px`,
+                  backgroundPosition: `${pan.x * scale}px ${pan.y * scale}px`,
+                }}
+              />
+
+              {/* Transformation group */}
+              <div
+                className="absolute inset-0 transform-gpu"
+                style={{
+                  transform: `scale(${scale}) translate(${pan.x}px, ${pan.y}px)`,
+                  transformOrigin: "0 0",
+                }}
+              >
+                {/* Connections */}
+                <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                  {connections.map((conn) => {
+                    const isActive = activeNodeId === conn.to.nodeId && completedNodes.includes(conn.from.nodeId);
+                    const isCompleted = completedNodes.includes(conn.from.nodeId) && completedNodes.includes(conn.to.nodeId);
+                    
+                    return (
+                      <g key={conn.id}>
+                        <path 
+                          d={conn.path} 
+                          fill="none" 
+                          stroke={isCompleted ? "#22c55e" : (isActive ? "#3b82f6" : conn.color)} 
+                          strokeWidth={isActive ? "3" : "2"} 
+                          className={`opacity-70 ${isActive ? "animate-pulse" : ""}`}
+                        />
+                        <path
+                          d={conn.path}
+                          fill="none"
+                          stroke={isCompleted ? "#22c55e" : (isActive ? "#3b82f6" : conn.color)}
+                          strokeWidth="1"
+                          strokeDasharray="4 2"
+                          className="opacity-50"
+                        />
+                        
+                        {isActive && (
+                          <motion.circle 
+                            cx="0"
+                            cy="0"
+                            r="4" 
+                            fill="#3b82f6"
+                            className="glow-effect"
+                            filter="url(#glow)"
+                            animate={{
+                              offsetDistance: ['0%', '100%']
+                            }}
+                            transition={{
+                              duration: 1.5,
+                              repeat: Infinity,
+                              ease: "linear"
+                            }}
+                            style={{
+                              offsetPath: `path("${conn.path}")`,
+                              offsetRotate: "0deg"
+                            }}
+                          />
+                        )}
+                      </g>
+                    );
+                  })}
                   
-                  if (!source || !target) return null;
-                  
-                  // Get width of source node
-                  const sourceWidth = source.expanded ? 220 : 160;
-                  
-                  // Calculate connection points
-                  const sourceX = source.position.x + sourceWidth;
-                  const sourceY = source.position.y + 25;
-                  const targetX = target.position.x;
-                  const targetY = target.position.y + 25;
-                  
-                  const controlPoint1X = sourceX + 50;
-                  const controlPoint1Y = sourceY;
-                  const controlPoint2X = targetX - 50;
-                  const controlPoint2Y = targetY;
-                  
-                  const isActive = activeNodeId === edge.target && completedNodes.includes(edge.source);
-                  const isCompleted = completedNodes.includes(edge.source) && completedNodes.includes(edge.target);
-                  
-                  const edgeColor = isCompleted 
-                    ? 'rgb(34, 197, 94)' 
-                    : (isActive ? 'currentColor' : (edge.color || 'rgba(125, 125, 125, 0.7)'));
+                  <defs>
+                    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                      <feGaussianBlur stdDeviation="2.5" result="blur" />
+                      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                  </defs>
+                </svg>
+
+                {/* Nodes */}
+                {nodes.map((node) => {
+                  const isActive = activeNodeId === node.id;
+                  const isCompleted = completedNodes.includes(node.id);
                   
                   return (
-                    <g key={edge.id}>
-                      <motion.path 
-                        d={`M${sourceX},${sourceY} C${controlPoint1X},${controlPoint1Y} ${controlPoint2X},${controlPoint2Y} ${targetX},${targetY}`}
-                        fill="none"
-                        stroke={edgeColor}
-                        strokeOpacity={isActive || isCompleted ? "1" : "0.6"}
-                        strokeWidth={isActive ? "3" : "2"}
-                        className={isActive ? "animate-pulse" : ""}
-                        strokeDasharray={isActive ? "5,5" : ""}
-                        strokeLinecap="round"
-                        markerEnd="url(#arrow)"
-                        initial={{ pathLength: 0 }}
-                        animate={{ pathLength: 1 }}
-                        transition={{ duration: 1.5, delay: 0.2 }}
-                      />
+                    <motion.div
+                      key={node.id}
+                      className={`absolute pipeline-node cursor-move bg-black/90 border rounded-md shadow-lg w-[250px] overflow-hidden ${
+                        draggingNode === node.id ? "z-10 shadow-xl" : "z-0"
+                      } ${isActive ? "ring-2 ring-primary/70" : ""} ${isCompleted ? "border-green-500/70" : `border-${node.color === "#4ade80" ? "emerald" : node.color === "#3b82f6" ? "blue" : "gray"}-500/50`}`}
+                      style={{ left: `${node.x}px`, top: `${node.y}px` }}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.3 }}
+                      onMouseDown={(e) => handleMouseDown(e, node.id)}
+                    >
+                      <div
+                        className="p-2 flex justify-between items-center cursor-pointer"
+                        style={{ backgroundColor: `${node.color}20` }}
+                        onClick={() => toggleNodeCollapse(node.id)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-5 h-5 rounded-sm flex items-center justify-center"
+                            style={{ backgroundColor: node.color }}
+                          >
+                            {getNodeIcon(node.type)}
+                          </div>
+                          <span className="font-medium text-sm">{node.title}</span>
+                        </div>
+                        <button className="text-foreground/50 hover:text-foreground">
+                          {node.collapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                        </button>
+                      </div>
+
+                      {!node.collapsed && (
+                        <div className="p-2 space-y-2">
+                          {/* Inputs */}
+                          {node.inputs.map((input, idx) => (
+                            <div key={input.id} className="flex items-center gap-2 text-xs">
+                              <div
+                                className="w-3 h-3 rounded-full cursor-pointer"
+                                style={{ backgroundColor: getInputColor(input.type) }}
+                              />
+                              <span className="text-foreground/70 w-24 truncate">{input.name}</span>
+                              {input.value && (
+                                <Input
+                                  value={input.value.toString()}
+                                  className="h-6 text-xs bg-black/50 border-gray-700"
+                                />
+                              )}
+                            </div>
+                          ))}
+
+                          {/* Outputs */}
+                          {node.outputs.map((output, idx) => (
+                            <div key={output.id} className="flex items-center justify-between gap-2 text-xs">
+                              <div className="flex-1" />
+                              <span className="text-foreground/70 text-right w-24 truncate">{output.name}</span>
+                              <div
+                                className="w-3 h-3 rounded-full cursor-pointer"
+                                style={{ backgroundColor: getInputColor(output.type) }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       
                       {isActive && (
-                        <motion.circle 
-                          animate={{
-                            cx: [sourceX, targetX],
-                            cy: [sourceY, targetY]
-                          }}
-                          transition={{
-                            duration: 1,
-                            repeat: Infinity,
-                            ease: "linear"
-                          }}
-                          r="4" 
-                          className="fill-primary"
-                        />
+                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                          <motion.div 
+                            className="h-full bg-primary"
+                            initial={{ width: "0%" }}
+                            animate={{ width: `${progress}%` }}
+                            transition={{ duration: 0.3 }}
+                          ></motion.div>
+                        </div>
                       )}
-                    </g>
+                      
+                      {isCompleted && (
+                        <motion.div 
+                          initial={{ scale: 0, opacity: 0 }} 
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ duration: 0.3 }}
+                          className="absolute -top-2 -right-2 bg-green-500 rounded-full p-0.5"
+                        >
+                          <CheckCircle2 className="h-4 w-4 text-white" />
+                        </motion.div>
+                      )}
+                    </motion.div>
                   );
                 })}
-              </svg>
+              </div>
 
-              {nodes.map((node) => {
-                const isActive = activeNodeId === node.id;
-                const isCompleted = completedNodes.includes(node.id);
-                const isDragging = draggingNodeId === node.id;
-                const nodeWidth = node.expanded ? 220 : 160;
-                
-                return (
-                  <motion.div 
-                    key={node.id}
-                    className={`absolute rounded-md shadow-lg backdrop-blur-sm border overflow-hidden cursor-move
-                      ${nodeColorClass(node.type)}
-                      ${isCompleted ? 'border-green-500/70' : ''}
-                      ${isActive ? 'ring-2 ring-primary/70' : ''}
-                      ${isDragging ? 'z-50 shadow-xl ring-2 ring-primary/40' : ''}
-                    `}
-                    style={{ 
-                      left: node.position.x, 
-                      top: node.position.y,
-                      width: nodeWidth,
-                      transition: isDragging ? 'none' : 'width 0.3s ease'
-                    }}
-                    initial={{ scale: 0.95, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ duration: 0.5 }}
-                    drag
-                    dragConstraints={containerRef}
-                    dragElastic={0}
-                    dragMomentum={false}
-                    onDragStart={() => handleDragStart(node.id)}
-                    onDragEnd={handleDragEnd}
-                    onDrag={(_, info) => {
-                      if (containerRef.current) {
-                        const x = node.position.x + info.delta.x;
-                        const y = node.position.y + info.delta.y;
-                        updateNodePosition(node.id, { x, y });
-                      }
-                    }}
-                  >
-                    <div className={`text-xs font-medium p-2 flex justify-between items-center ${nodeHeaderColor(node.type)}`}>
-                      <div className="flex items-center gap-1.5">
-                        {getNodeIcon(node.type)}
-                        <span>{node.title}</span>
-                      </div>
-                      
-                      <div className="flex items-center">
-                        <motion.div
-                          className="p-0.5 rounded hover:bg-black/10 mr-1"
-                          whileHover={{ scale: 1.2 }}
-                          whileTap={{ scale: 0.9 }}
-                        >
-                          <MoveHorizontal size={12} className="opacity-60" />
-                        </motion.div>
-                        
-                        <motion.button
-                          onClick={() => toggleNodeExpand(node.id)}
-                          whileHover={{ scale: 1.2 }}
-                          whileTap={{ scale: 0.9 }}
-                          className="p-0.5 rounded hover:bg-black/10"
-                        >
-                          {node.expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                        </motion.button>
-                      </div>
-                    </div>
-                    
-                    <div className="p-2 text-xs">
-                      <div className="text-muted-foreground mb-1">{node.subtitle}</div>
-                      
-                      <AnimatePresence>
-                        {node.expanded && node.config && (
-                          <motion.div 
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="mt-2 overflow-hidden"
-                          >
-                            <div className="space-y-1.5 pt-1 border-t border-foreground/10">
-                              {Object.entries(node.config).map(([key, value]) => (
-                                <div key={key} className="flex justify-between items-center">
-                                  <span className="text-muted-foreground">{key}:</span>
-                                  <span className="font-mono bg-foreground/5 px-1 rounded text-[10px]">{value.toString()}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                    
-                    <div className={`absolute w-3 h-3 rounded-full ${nodeHandleColor(node.type)} left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2`} />
-                    
-                    {node.type !== 'output' && (
-                      <div className={`absolute w-3 h-3 rounded-full ${nodeHandleColor(node.type)} right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2`} />
-                    )}
-                    
-                    {isActive && (
-                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-700 overflow-hidden">
-                        <motion.div 
-                          className="h-full bg-primary"
-                          initial={{ width: "0%" }}
-                          animate={{ width: `${progress}%` }}
-                          transition={{ duration: 0.3 }}
-                        ></motion.div>
-                      </div>
-                    )}
-                    
-                    {isCompleted && (
-                      <motion.div 
-                        initial={{ scale: 0, opacity: 0 }} 
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ duration: 0.3 }}
-                        className="absolute -top-2 -right-2 bg-green-500 rounded-full p-0.5"
-                      >
-                        <CheckCircle2 className="h-4 w-4 text-white" />
-                      </motion.div>
-                    )}
-                  </motion.div>
-                );
-              })}
+              {/* Controls overlay */}
+              <div className="absolute bottom-4 right-4 flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="bg-black/50 border-gray-700 text-white"
+                  onClick={() => setScale((prev) => Math.min(prev * 1.2, 2))}
+                >
+                  +
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="bg-black/50 border-gray-700 text-white"
+                  onClick={() => setScale((prev) => Math.max(prev * 0.8, 0.1))}
+                >
+                  -
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="bg-black/50 border-gray-700 text-white"
+                  onClick={() => {
+                    setScale(1);
+                    setPan({ x: 0, y: 0 });
+                  }}
+                >
+                  Reset
+                </Button>
+              </div>
             </div>
-
-            <div className="absolute top-4 right-4 space-x-2 flex">
-              <Badge variant="outline" className="bg-background/50 backdrop-blur-sm">
-                Nodes: {nodes.length}
-              </Badge>
-              <Badge variant="outline" className="bg-background/50 backdrop-blur-sm">
-                Connections: {edges.length}
-              </Badge>
-            </div>
-
-            <motion.div 
-              className="absolute bottom-4 right-4"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button 
-                size="sm" 
-                onClick={runPipeline} 
-                disabled={isRunning}
-                className="rounded-full shadow-glow"
-              >
-                {isRunning ? 'Running Pipeline...' : 'Run Pipeline'} 
-                {isRunning ? (
-                  <Circle className="ml-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <motion.div
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ repeat: Infinity, duration: 1.5 }}
-                  >
-                    <Zap className="ml-2 h-4 w-4" />
-                  </motion.div>
-                )}
-              </Button>
-            </motion.div>
           </motion.div>
 
           <motion.div 
@@ -587,10 +724,88 @@ const PipelineBuilder = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, delay: 0.4 }}
+            className="flex flex-col gap-4 lg:col-span-1"
           >
-            <div className="max-h-[500px] overflow-auto custom-scrollbar">
-              <CodeViewer />
-            </div>
+            <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+              <div className="p-4">
+                <h3 className="font-medium mb-3">Add Models</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" size="sm" className="flex flex-col h-auto py-3 gap-2">
+                    <Grid className="h-5 w-5 text-emerald-500" />
+                    <span className="text-xs">Grid</span>
+                  </Button>
+                  <Button variant="outline" size="sm" className="flex flex-col h-auto py-3 gap-2">
+                    <Box className="h-5 w-5 text-blue-500" />
+                    <span className="text-xs">Position</span>
+                  </Button>
+                  <Button variant="outline" size="sm" className="flex flex-col h-auto py-3 gap-2">
+                    <Layers className="h-5 w-5 text-emerald-500" />
+                    <span className="text-xs">Instance</span>
+                  </Button>
+                  <Button variant="outline" size="sm" className="flex flex-col h-auto py-3 gap-2">
+                    <Workflow className="h-5 w-5 text-violet-500" />
+                    <span className="text-xs">Geometry</span>
+                  </Button>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+              <div className="p-4">
+                <h3 className="font-medium mb-3">Instructions</h3>
+                <ul className="text-sm text-foreground/70 space-y-2">
+                  <li className="flex items-start gap-2">
+                    <span className="bg-primary/20 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs mt-0.5">
+                      1
+                    </span>
+                    <span>Drag models to position</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="bg-primary/20 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs mt-0.5">
+                      2
+                    </span>
+                    <span>Connect node inputs/outputs</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="bg-primary/20 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs mt-0.5">
+                      3
+                    </span>
+                    <span>Configure node properties</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="bg-primary/20 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs mt-0.5">
+                      4
+                    </span>
+                    <span>Run your pipeline</span>
+                  </li>
+                </ul>
+              </div>
+            </Card>
+
+            <Card className="border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden">
+              <div className="p-4">
+                <h3 className="font-medium mb-3">Code Output</h3>
+                <div className="max-h-[180px] overflow-auto custom-scrollbar bg-black/80 p-3 rounded-md">
+                  <pre className="text-xs text-green-400 font-mono">
+{`// Generated Pipeline Code
+import { createPipeline } from '@piper/core';
+
+const pipeline = createPipeline({
+  nodes: ${nodes.length},
+  connections: ${connections.length},
+  entry: "node1",
+  exit: "node7"
+});
+
+pipeline.run(async (data) => {
+  // Process data through nodes
+  const output = await pipeline.execute(data);
+  return output;
+});`}
+                  </pre>
+                </div>
+              </div>
+            </Card>
           </motion.div>
         </div>
 
@@ -601,7 +816,7 @@ const PipelineBuilder = () => {
           transition={{ duration: 0.7, delay: 0.5 }}
           className="mt-10 text-center"
         >
-          <Button size="lg" className="rounded-full px-8">
+          <Button size="lg" className="rounded-full px-8 shadow-glow">
             Build Your Pipeline <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </motion.div>
