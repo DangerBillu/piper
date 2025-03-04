@@ -3,16 +3,15 @@ import PipelineBuilder from "@/components/pipeline-builder"
 import HowItWorks from "@/components/how-it-works"
 import DataManagement from "@/components/data-management"
 import ExploreModels from "@/components/explore-models"
+import Navbar from "@/components/navbar"
 
 import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function Home() {
   return (
     <main className="min-h-screen">
-      {/* Theme toggle button */}
-      <div className="fixed top-4 right-4 z-50">
-        <ThemeToggle />
-      </div>
+      {/* Navbar */}
+      <Navbar />
 
       {/* Hero section */}
       <HeroSection />

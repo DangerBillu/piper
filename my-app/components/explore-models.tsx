@@ -112,7 +112,7 @@ export default function ExploreModels() {
   }
 
   return (
-    <section id="models" className="relative">
+    <section id="models" className="relative px-4 sm:p-6 md:px-8 mx-auto max-w-7xl">
       <div className="text-center mb-12">
         <h2 className="text-3xl font-bold mb-4">Explore Models</h2>
         <p className="text-foreground/70 max-w-2xl mx-auto">
