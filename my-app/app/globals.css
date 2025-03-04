@@ -1,0 +1,121 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 252 59% 48%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 252 59% 48%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 252 59% 54%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 252 59% 54%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+.pipeline-node {
+  @apply bg-secondary rounded-lg p-4 shadow-lg border border-border cursor-move transition-all duration-200;
+}
+
+.pipeline-node:hover {
+  @apply shadow-xl border-primary/50;
+}
+
+.pipeline-connector {
+  @apply stroke-primary stroke-2 fill-none;
+}
+
+.pipeline-connector-path {
+  @apply transition-all duration-300;
+}
+
+.pipeline-connector-handle {
+  @apply fill-primary stroke-none cursor-pointer;
+}
+
+.code-editor {
+  @apply font-mono text-sm bg-background border border-border rounded-md p-4 overflow-auto;
+}
+
+.code-editor pre {
+  @apply m-0;
+}
+
+.code-editor .token.comment {
+  @apply text-muted-foreground;
+}
+
+.code-editor .token.string {
+  @apply text-green-400;
+}
+
+.code-editor .token.number {
+  @apply text-amber-400;
+}
+
+.code-editor .token.keyword {
+  @apply text-purple-400;
+}
+
+.code-editor .token.function {
+  @apply text-blue-400;
+}
+
+.code-editor .token.operator {
+  @apply text-rose-400;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
